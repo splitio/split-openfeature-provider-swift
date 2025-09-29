@@ -1,0 +1,25 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Split",
+        "repositoryURL": "https://github.com/splitio/ios-client.git",
+        "state": {
+          "branch": null,
+          "revision": "0833365635d3019f1283a9a39a5e3830f41daf34",
+          "version": "3.4.1"
+        }
+      },
+      {
+        "package": "OpenFeature",
+        "repositoryURL": "https://github.com/open-feature/swift-sdk.git",
+        "state": {
+          "branch": null,
+          "revision": "8455efe44541420cfb5ffcf6d95422361e8209a8",
+          "version": "0.4.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
