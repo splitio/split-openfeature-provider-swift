@@ -8,10 +8,6 @@ public class SplitProvider: FeatureProvider {
 
     public var metadata: any OpenFeature.ProviderMetadata = SwiftProviderMetadata()
 
-    public init() {
-        let config: SplitClientConfig = SplitClientConfig()
-    }
-
     public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws {
         throw ProviderError.notImplemented
     }
