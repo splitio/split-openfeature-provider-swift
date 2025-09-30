@@ -1,0 +1,120 @@
+pipeline:
+  name: Swift Test Pipeline with Caching
+  identifier: swift_test_pipeline_cached
+  projectIdentifier: Harness_Split
+  orgIdentifier: PROD
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: fmegithubrunnersci
+        repoName: split-openfeature-provider-swift
+        build: <+input>
+  stages:
+    - stage:
+        name: Swift Tests with Caching
+        identifier: swift_tests_cached
+        description: Run Swift tests with SPM dependency caching
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: MacOS
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Setup Swift Environment
+                  identifier: setup_swift
+                  spec:
+                    shell: Sh
+                    command: |
+                      echo "Swift version:"
+                      swift --version
+
+                      echo "Resolving Swift Package Manager dependencies..."
+                      if swift package resolve; then
+                        echo "Dependencies resolved successfully!"
+                      else
+                        echo "Failed to resolve dependencies"
+                        exit 1
+                      fi
+                  timeout: 5m
+              - step:
+                  type: Run
+                  name: Run Swift Tests in Parallel
+                  identifier: run_swift_tests_parallel
+                  spec:
+                    shell: Sh
+                    command: |
+                      echo "Running Swift tests in parallel..."
+                      swift test --parallel --verbose
+                      echo "✅ All Swift tests completed successfully!"
+                  timeout: 15m
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: MarkAsFailure
+              - step:
+                  type: Run
+                  name: Test Results Summary
+                  identifier: test_summary
+                  spec:
+                    shell: Sh
+                    command: |
+                      echo "🎉 Swift Test Pipeline Completed!"
+                      echo "Repository: split-openfeature-provider-swift"
+                      echo "Build: <+pipeline.sequenceId>"
+                      echo "Parallel Testing: Enabled"
+                      echo "SPM Caching: Enabled"
+                  timeout: 1m
+                  when:
+                    stageStatus: Success
+  triggers:
+    - trigger:
+        name: Push Trigger
+        identifier: push_trigger
+        enabled: true
+        description: Trigger on push to main branch
+        type: Webhook
+        spec:
+          type: Github
+          spec:
+            type: Push
+            spec:
+              connectorRef: fmegithubrunnersci
+              autoAbortPreviousExecutions: true
+              payloadConditions:
+                - key: targetBranch
+                  operator: Equals
+                  value: main
+    - trigger:
+        name: PR Trigger
+        identifier: pr_trigger
+        enabled: true
+        description: Trigger on pull requests
+        type: Webhook
+        spec:
+          type: Github
+          spec:
+            type: PullRequest
+            spec:
+              connectorRef: fmegithubrunnersci
+              autoAbortPreviousExecutions: true
+              payloadConditions:
+                - key: sourceBranch
+                  operator: Regex
+                  value: .*
+                - key: targetBranch
+                  operator: Equals
+                  value: main
+              actions:
+                - Opened
+                - Reopened
+                - Synchronize
