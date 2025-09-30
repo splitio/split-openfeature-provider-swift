@@ -12,7 +12,7 @@ pipeline:
         build: <+input>
   stages:
     - stage:
-        name: Swift Tests with Caching
+        name: Swift Tests
         identifier: swift_tests_cached
         description: Run Swift tests with SPM dependency caching and reporting
         type: CI
