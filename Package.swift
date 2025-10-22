@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "swift-provider",
+    name: "SplitProvider",
     platforms: [
         .iOS(.v14),
         .macOS(.v11),
@@ -14,28 +14,28 @@ let package = Package(
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "swift-provider",
-            targets: ["swift-provider"]
+            name: "SplitProvider",
+            targets: ["SplitProvider"]
         )
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/open-feature/swift-sdk.git", from: "0.4.0"),
-        .package(url: "https://github.com/splitio/ios-client.git", from: "3.4.1"),
+        .package(url: "https://github.com/splitio/ios-client.git", from: "3.4.2"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "swift-provider",
+            name: "SplitProvider",
             dependencies: [
                 .product(name: "OpenFeature", package: "swift-sdk"),
                 .product(name: "Split", package: "ios-client"),
             ]
         ),
         .testTarget(
-            name: "swift-providerTests",
-            dependencies: ["swift-provider"]
+            name: "SplitProviderTests",
+            dependencies: ["SplitProvider"]
         ),
     ]
 )

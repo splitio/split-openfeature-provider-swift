@@ -1,5 +1,5 @@
 import XCTest
-@testable import swift_provider
+@testable import SplitProvider
 @testable import OpenFeature
 
 final class SplitProviderTests: XCTestCase {
