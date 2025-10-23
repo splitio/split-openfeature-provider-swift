@@ -23,4 +23,4 @@ jobs:
           xcode-version: '16.4'
 
       - name: Run tests
-        run: swift test --parallel --enable-test-discovery
+        run: swift test -v --parallel --enable-test-discovery
