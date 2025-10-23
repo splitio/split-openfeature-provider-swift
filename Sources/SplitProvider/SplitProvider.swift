@@ -27,7 +27,7 @@ public class SplitProvider: FeatureProvider {
         
         guard let initialContext = initialContext else {
             eventHandler.send(.error(errorCode: ErrorCode(rawValue: 1) , message: "Initialization context is missing for Split provider."))
-            throw Errors.missingInitContext(errorCode: 1)
+            throw Errors.missingInitContext()
         }
         
         // 1. Unpack Context
@@ -37,7 +37,7 @@ public class SplitProvider: FeatureProvider {
               let USER_KEY = userKeyValue, userKeyValue != ""
         else {
             eventHandler.send(.error(errorCode: ErrorCode(rawValue: 2) , message: "Initialization data is missing for Split provider."))
-            throw Errors.missingInitData(errorCode: 2)
+            throw Errors.missingInitData()
         }
         
         // 2. Client setup
