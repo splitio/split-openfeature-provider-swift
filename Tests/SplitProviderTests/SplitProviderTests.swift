@@ -193,7 +193,7 @@ final class SplitProviderTests: XCTestCase {
         }
 
         wait(for: [openFeatureExp], timeout: 5)
-        XCTAssertEqual(provider.splitClientConfig?.logLevel, .verbose)
+        XCTAssertEqual(provider.splitClientConfig?.logLevel, .verbose, "SplitConfig should be correctly propagated")
     }
 
     fileprivate func eval(_ flag: String) {
