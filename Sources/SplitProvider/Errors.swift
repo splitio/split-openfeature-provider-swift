@@ -2,6 +2,6 @@
 
 internal enum Errors: Error {
     case notImplemented
-    case missingInitContext
-    case missingInitData
+    case missingInitContext(errorCode: Int)
+    case missingInitData(errorCode: Int)
 }

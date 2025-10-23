@@ -72,7 +72,7 @@ final class SplitProviderTests: XCTestCase {
                 case .ready:
                     break
                 case .error(let message):
-                    if message.message == "Initialization data is missing for Split provider." {
+                    if message.errorCode?.rawValue == 2 {
                         errorFired = true
                     }
                     break
@@ -92,7 +92,7 @@ final class SplitProviderTests: XCTestCase {
         }
 
         wait(for: [openFeatureExp], timeout: 5)
-        XCTAssertTrue(errorFired)
+        XCTAssertTrue(errorFired, "If there is no API key, an error should be fired")
     }
     
     func testMissingUserKey() {
@@ -106,7 +106,7 @@ final class SplitProviderTests: XCTestCase {
                 case .ready:
                     break
                 case .error(let message):
-                    if message.message == "Initialization data is missing for Split provider." {
+                    if message.errorCode?.rawValue == 2 {
                         errorFired = true
                     }
                     break
@@ -126,7 +126,7 @@ final class SplitProviderTests: XCTestCase {
         }
 
         wait(for: [openFeatureExp], timeout: 5)
-        XCTAssertTrue(errorFired)
+        XCTAssertTrue(errorFired, "If there is no API key, an error should be fired")
     }
     
     func testMissingInitContext() async {
@@ -140,9 +140,9 @@ final class SplitProviderTests: XCTestCase {
         providerCancellable = OpenFeatureAPI.shared.observe().sink { [weak self] event in
             switch event {
                 case .ready:
-                    self?.eval()
+                    self?.eval("mauro-test-flag")
                 case .error(let message):
-                    if message.message == "Initialization context is missing for Split provider." {
+                    if message.errorCode?.rawValue == 1 {
                         errorFired = true
                     }
                 default:
@@ -160,7 +160,7 @@ final class SplitProviderTests: XCTestCase {
         }
 
         wait(for: [openFeatureExp], timeout: 5)
-        XCTAssertTrue(errorFired)
+        XCTAssertTrue(errorFired, "If there is no API key, an error should be fired")
     }
     
     func testInitializationWithConfig() async {

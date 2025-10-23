@@ -26,8 +26,8 @@ public class SplitProvider: FeatureProvider {
     public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws {
         
         guard let initialContext = initialContext else {
-            eventHandler.send(.error(message: "Initialization context is missing for Split provider."))
-            throw Errors.missingInitContext
+            eventHandler.send(.error(errorCode: ErrorCode(rawValue: 1) , message: "Initialization context is missing for Split provider."))
+            throw Errors.missingInitContext(errorCode: 1)
         }
         
         // 1. Unpack Context
@@ -36,8 +36,8 @@ public class SplitProvider: FeatureProvider {
         guard let API_KEY = apiKeyValue, apiKeyValue != "",
               let USER_KEY = userKeyValue, userKeyValue != ""
         else {
-            eventHandler.send(.error(message: "Initialization data is missing for Split provider."))
-            throw Errors.missingInitData
+            eventHandler.send(.error(errorCode: ErrorCode(rawValue: 2) , message: "Initialization data is missing for Split provider."))
+            throw Errors.missingInitData(errorCode: 2)
         }
         
         // 2. Client setup
