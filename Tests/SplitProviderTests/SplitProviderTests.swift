@@ -21,7 +21,7 @@ final class SplitProviderTests: XCTestCase {
     }
     
     func testSplitProviderImplementsFeatureProvider() {
-        XCTAssertTrue(SplitProvider() is FeatureProvider)
+        XCTAssertTrue(SplitProvider() is FeatureProvider) 
     }
 
     func testNameIsCorrect() {
