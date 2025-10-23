@@ -1,20 +1,22 @@
+//  Created by Martin Cardozo on 22/10/2025.
+
 import Combine
 import Foundation
 import OpenFeature
 import Split
 
-public final class SplitProvider: FeatureProvider {
+public class SplitProvider: FeatureProvider {
     
     // Split Components
-    private var splitClient: SplitClient?
-    private var splitFactory: SplitFactory?
-    private var splitContext: SplitInitContext?
-    private var splitClientConfig: SplitClientConfig?
+    internal var splitClient: SplitClient?
+    internal var splitClientConfig: SplitClientConfig?
+    internal var factory: SplitFactory?
     
     // Open Feature Components
     public var hooks: [any OpenFeature.Hook] = []
-    public var metadata: any OpenFeature.ProviderMetadata = SwiftProviderMetadata()
+    public var metadata: any OpenFeature.ProviderMetadata = SplitProviderMetadata()
     private let eventHandler = EventHandler()
+    private var splitContext: SplitInitContext?
     
     // MARK: Custom Initialization
     public init(_ config: SplitClientConfig? = nil) {
@@ -39,17 +41,19 @@ public final class SplitProvider: FeatureProvider {
         }
         
         // 2. Client setup
-        let context = SplitInitContext(API_KEY: API_KEY, USER_KEY: USER_KEY)
+        splitContext = SplitInitContext(API_KEY: API_KEY, USER_KEY: USER_KEY)
         let key: Key = Key(matchingKey: USER_KEY)
-        let factoryBuilder = DefaultSplitFactoryBuilder()
-        factoryBuilder.setApiKey(API_KEY).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig())
-        splitFactory = factoryBuilder.build()
-        splitClient  = splitFactory?.client
-        let manager  = splitFactory?.manager
         
+        if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(API_KEY).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
+        
+        splitClient = factory?.client
+
+        // 3. Wait for Ready signal
+        let semaphore = DispatchSemaphore(value: 0)
         splitClient?.on(event: .sdkReady) { [weak self] in
-            self?.eventHandler.send(ProviderEvent.ready)
+            semaphore.signal()
         }
+        semaphore.wait()
     }
     
     // MARK: Context Change
@@ -86,8 +90,6 @@ extension SplitProvider {
     }
 }
 
-// MARK: Open Feature Components
-struct SwiftProviderMetadata: ProviderMetadata {
+struct SplitProviderMetadata: ProviderMetadata {
     let name: String? = "Split"
-    let version: String? = "3.4.0"
 }

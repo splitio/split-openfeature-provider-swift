@@ -3,7 +3,8 @@
 import Combine
 import OpenFeature
 
-internal final class EventHandler { // Used by Combine to propagate events
+// Used by Combine to propagate events
+internal final class EventHandler {
     private let subject = PassthroughSubject<OpenFeature.ProviderEvent?, Never>()
     
     var publisher: AnyPublisher<OpenFeature.ProviderEvent?, Never> {
