@@ -86,7 +86,7 @@ extension SplitProvider {
     }
 
     public func observe() -> AnyPublisher<OpenFeature.ProviderEvent?, Never> {
-        eventHandler.publisher.eraseToAnyPublisher()
+        eventHandler.publisher.eraseToAnyPublisher() 
     }
 }
 
