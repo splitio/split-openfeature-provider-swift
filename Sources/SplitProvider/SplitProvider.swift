@@ -49,11 +49,11 @@ public class SplitProvider: FeatureProvider {
         splitClient = factory?.client
 
         // 3. Wait for Ready signal
-        let semaphore = DispatchSemaphore(value: 0)
-        splitClient?.on(event: .sdkReady) { [weak self] in
-            semaphore.signal()
+        await withCheckedContinuation { continuation in
+            splitClient?.on(event: .sdkReady) {
+                continuation.resume()
+            }
         }
-        semaphore.wait()
     }
     
     // MARK: Context Change
