@@ -129,7 +129,7 @@ final class SplitProviderTests: XCTestCase {
         XCTAssertTrue(errorFired, "If there is no User key, an error should be fired")
     }
     
-    func testMissingInitContext() async {
+    func testMissingInitContext() {
         
         let openFeatureExp = expectation(description: "OpenFeature Ready")
         var errorFired = false
@@ -163,7 +163,7 @@ final class SplitProviderTests: XCTestCase {
         XCTAssertTrue(errorFired, "If there is no initialContext, an error should be fired")
     }
     
-    func testInitializationWithConfig() async {
+    func testInitializationWithConfig() {
         
         let openFeatureExp = expectation(description: "OpenFeature Ready")
 
