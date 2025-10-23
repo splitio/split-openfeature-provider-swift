@@ -126,7 +126,7 @@ final class SplitProviderTests: XCTestCase {
         }
 
         wait(for: [openFeatureExp], timeout: 5)
-        XCTAssertTrue(errorFired, "If there is no API key, an error should be fired")
+        XCTAssertTrue(errorFired, "If there is no User key, an error should be fired")
     }
     
     func testMissingInitContext() async {
