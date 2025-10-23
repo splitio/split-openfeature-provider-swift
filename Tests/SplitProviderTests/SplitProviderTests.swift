@@ -196,9 +196,9 @@ final class SplitProviderTests: XCTestCase {
         XCTAssertEqual(provider.splitClientConfig?.logLevel, .verbose)
     }
 
-    fileprivate func eval() {
+    fileprivate func eval(_ flag: String) {
         do {
-            let eval = try provider.getStringEvaluation(key: "mauro-test-flag", defaultValue: "", context: nil)
+            let eval = try provider.getStringEvaluation(key: flag, defaultValue: "", context: nil)
             print("Flag value:", eval.value)
         } catch {
             print("Provider error:", error)
