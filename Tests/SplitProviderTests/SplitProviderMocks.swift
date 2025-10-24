@@ -13,11 +13,21 @@ internal final class FactoryMock: SplitFactory {
     func client(key: Key) -> any SplitClient { ClientMock() }
     func client(matchingKey: String) -> any SplitClient { ClientMock() }
     func client(matchingKey: String, bucketingKey: String?) -> any SplitClient { ClientMock() }
-    func setUserConsent(enabled: Bool) { true }
+    func setUserConsent(enabled: Bool) {}
+    
+    // For testing
+    func getClient() -> ClientMock {
+        client as! ClientMock
+    }
 }
 
 internal final class ClientMock: SplitClient {
     var treatment = "Treatment"
+    var timeout = false
+    
+    init() {
+        print(":: Mock Client started")
+    }
     
     // MARK: Treatments
     func getTreatment(_ split: String, attributes: [String : Any]?) -> String {
@@ -92,24 +102,45 @@ internal final class ClientMock: SplitClient {
         [treatment: SplitResult(treatment: treatment, config: nil)]
     }
     
+    var events: [SplitEvent: ()->()] = [:]
+    
     // MARK: Events
     func on(event: SplitEvent, execute action: @escaping SplitAction) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            action()
+        
+        events[event] = action
+
+        if timeout {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                print(":: Mock Client :: SDK_TIMEOUT")
+                self.events[.sdkReadyTimedOut]!()
+            }
+            return
+        }
+        
+        switch event {
+            case .sdkUpdated:
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    print(":: Mock Client :: SDK_UPDATED")
+                    self.events[.sdkUpdated]!()
+                }
+            case .sdkReady:
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    print(":: Mock Client :: SDK_READY")
+                    self.events[.sdkReady]!()
+                }
+            case .sdkReadyTimedOut:
+                return
+            case .sdkReadyFromCache:
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    print(":: Mock Client :: SDK_READY_FROM_CACHE")
+                    self.events[.sdkReadyFromCache]!()
+                }
         }
     }
     
-    func on(event: SplitEvent, runInBackground: Bool, execute action: @escaping SplitAction) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            action()
-        }
-    }
+    func on(event: SplitEvent, runInBackground: Bool, execute action: @escaping SplitAction) {}
     
-    func on(event: SplitEvent, queue: DispatchQueue, execute action: @escaping SplitAction) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            action()
-        }
-    }
+    func on(event: SplitEvent, queue: DispatchQueue, execute action: @escaping SplitAction) {}
     
     // MARK: Attributes
     func setAttribute(name: String, value: Any) -> Bool { true }

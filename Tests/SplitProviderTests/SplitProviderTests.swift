@@ -19,13 +19,9 @@ final class SplitProviderTests: XCTestCase {
     override func tearDown() {
         providerCancellable?.cancel()
     }
-    
-    func testSplitProviderImplementsFeatureProvider() {
-        XCTAssertTrue(SplitProvider() is FeatureProvider) 
-    }
 
     func testNameIsCorrect() {
-        XCTAssertTrue(SplitProvider().metadata.name == "Split")
+        XCTAssertTrue(SplitProvider().metadata.name == Constants.PROVIDER_NAME.rawValue)
     }
     
     func testCorrectInitialization() {
@@ -40,15 +36,14 @@ final class SplitProviderTests: XCTestCase {
             switch event {
                 case .ready:
                     readyExp.fulfill()
-                case .error(_):
+                case .error(let errorCode, _):
                     nonErrorExp.fulfill()
-                    break
                 default:
                     break
             }
         }
         
-        let context = SplitInitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
+        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
         provider = SplitProvider()
         provider.factory = FactoryMock()
         
@@ -71,17 +66,16 @@ final class SplitProviderTests: XCTestCase {
             switch event {
                 case .ready:
                     break
-                case .error(let message):
-                    if message.errorCode?.rawValue == 2 {
+                case .error(let errorCode, _):
+                    if errorCode == .invalidContext {
                         errorFired = true
                     }
-                    break
                 default:
                     break
             }
         }
         
-        let context = SplitInitContext(API_KEY: "", USER_KEY: "martin")
+        let context = InitContext(API_KEY: "", USER_KEY: "martin")
         provider = SplitProvider()
         provider.factory = FactoryMock()
         
@@ -105,17 +99,16 @@ final class SplitProviderTests: XCTestCase {
             switch event {
                 case .ready:
                     break
-                case .error(let message):
-                    if message.errorCode?.rawValue == 2 {
+                case .error(let errorCode, _):
+                    if errorCode == .targetingKeyMissing {
                         errorFired = true
                     }
-                    break
                 default:
                     break
             }
         }
         
-        let context = SplitInitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "")
+        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "")
         provider = SplitProvider()
         provider.factory = FactoryMock()
         
@@ -141,8 +134,8 @@ final class SplitProviderTests: XCTestCase {
             switch event {
                 case .ready:
                     self?.eval("mauro-test-flag")
-                case .error(let message):
-                    if message.errorCode?.rawValue == 1 {
+                case .error(let errorCode, _):
+                    if errorCode == .invalidContext {
                         errorFired = true
                     }
                 default:
@@ -165,21 +158,23 @@ final class SplitProviderTests: XCTestCase {
     
     func testInitializationWithConfig() {
         
+        let readyExp = expectation(description: "SDK Ready")
         let openFeatureExp = expectation(description: "OpenFeature Ready")
 
         // Config if needed
-        let context = SplitInitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
+        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
         let config = SplitClientConfig()
         config.logLevel = .verbose
         
         provider = SplitProvider(config)
+        provider.factory = FactoryMock()
         
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
                 case .ready:
-                    break
-                case .error(let message):
+                    readyExp.fulfill()
+                case .error(_,_):
                     break
                 default:
                     break
@@ -188,12 +183,42 @@ final class SplitProviderTests: XCTestCase {
         
         // Kickoff Provider
         Task {
-            await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: nil)
+            await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
             openFeatureExp.fulfill()
         }
 
-        wait(for: [openFeatureExp], timeout: 5)
+        wait(for: [openFeatureExp, readyExp], timeout: 5)
         XCTAssertEqual(provider.splitClientConfig?.logLevel, .verbose, "SplitConfig should be correctly propagated")
+    }
+    
+    func testTimeOut() {
+        
+        let errorExp = expectation(description: "SDK should timeout")
+        
+        // Setup events observer
+        providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
+            switch event {
+                case .ready:
+                    break
+                case .error(let errorCode, let message):
+                    if errorCode == .general && message == "Provider timed out" {
+                        errorExp.fulfill()
+                    }
+                default:
+                    break
+            }
+        }
+        
+        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
+        provider = SplitProvider()
+        let factory = FactoryMock()
+        factory.getClient().timeout = true // MARK: Fail point
+        provider.factory = factory
+        
+        // Kickoff Provider
+        Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
+
+        wait(for: [errorExp], timeout: 4)
     }
 
     fileprivate func eval(_ flag: String) {
