@@ -3,34 +3,42 @@
 import OpenFeature
 
 internal struct InitContext: OpenFeature.EvaluationContext {
-    let API_KEY: String
-    let USER_KEY: String
+    let apiKey: String
+    let userKey: String
+    
+    var props: [String: OpenFeature.Value] {
+        [
+            "API_KEY": .string(apiKey),
+            "USER_KEY": .string(userKey)
+        ]
+    }
     
     func keySet() -> Set<String> {
         [Constants.API_KEY.rawValue, Constants.USER_KEY.rawValue]
     }
 
     func getTargetingKey() -> String {
-        USER_KEY
+        userKey
     }
 
     func deepCopy() -> any OpenFeature.EvaluationContext {
-        InitContext(API_KEY: API_KEY, USER_KEY: USER_KEY)
+        InitContext(apiKey: apiKey, userKey: userKey)
     }
 
     func getValue(key: String) -> OpenFeature.Value? {
-        switch key {
-            case Constants.API_KEY.rawValue: return OpenFeature.Value.string(API_KEY)
-            case Constants.USER_KEY.rawValue: return OpenFeature.Value.string(USER_KEY)
-            default: return nil
+        props[key]
+    }
+
+    func asMap() -> [String: OpenFeature.Value] {
+        props
+    }
+
+    func asObjectMap() -> [String: AnyHashable?] {
+        props.mapValues { value in
+            switch value {
+                case .string(let str): return str
+                default: return nil
+            }
         }
     }
-
-    func asMap() -> [String : OpenFeature.Value] {
-        [Constants.API_KEY.rawValue: OpenFeature.Value.string(API_KEY), Constants.USER_KEY.rawValue: OpenFeature.Value.string(USER_KEY)]
-    }
-
-    func asObjectMap() -> [String : AnyHashable?] {
-        [Constants.API_KEY.rawValue: API_KEY, Constants.USER_KEY.rawValue: USER_KEY]
-    }
-}
+} 

@@ -9,7 +9,7 @@ final class InitContextTests: XCTestCase {
     var SUT: InitContext!
     
     override func setUp() {
-        SUT = InitContext(API_KEY: "skhjcgkjhfgasdhka", USER_KEY: "martin")
+        SUT = InitContext(apiKey: "skhjcgkjhfgasdhka", userKey: "martin")
     }
     
     override func tearDown() {}

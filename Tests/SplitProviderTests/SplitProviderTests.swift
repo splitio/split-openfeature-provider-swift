@@ -43,7 +43,7 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
+        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
         provider = SplitProvider()
         provider.factory = FactoryMock()
         
@@ -75,7 +75,7 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(API_KEY: "", USER_KEY: "martin")
+        let context = InitContext(apiKey: "", userKey: "martin")
         provider = SplitProvider()
         provider.factory = FactoryMock()
         
@@ -108,7 +108,7 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "")
+        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "")
         provider = SplitProvider()
         provider.factory = FactoryMock()
         
@@ -162,7 +162,7 @@ extension SplitProviderTests {
         let openFeatureExp = expectation(description: "OpenFeature Ready")
 
         // Config if needed
-        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
+        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
         let config = SplitClientConfig()
         config.logLevel = .verbose
         
@@ -209,7 +209,7 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(API_KEY: "sofd75fo7w6ao576oshf567jshdkfrbk746", USER_KEY: "martin")
+        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
         provider = SplitProvider()
         let factory = FactoryMock()
         factory.getClient().timeout = true // MARK: Fail point
