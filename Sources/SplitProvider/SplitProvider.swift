@@ -43,7 +43,7 @@ public class SplitProvider: FeatureProvider {
         }
         
         // 2. Client setup
-        splitContext = InitContext(API_KEY: API_KEY, USER_KEY: USER_KEY)
+        splitContext = InitContext(apiKey: API_KEY, userKey: USER_KEY)
         let key: Key = Key(matchingKey: USER_KEY)
         if factory == nil {
             factory = DefaultSplitFactoryBuilder().setApiKey(API_KEY).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build()
