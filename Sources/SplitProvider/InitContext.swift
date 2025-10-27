@@ -41,4 +41,4 @@ internal struct InitContext: OpenFeature.EvaluationContext {
             }
         }
     }
-}
+} 
