@@ -6,12 +6,10 @@ internal struct InitContext: OpenFeature.EvaluationContext {
     let apiKey: String
     let userKey: String
     
-    var props: [String: OpenFeature.Value] {
-        [
-            "API_KEY": .string(apiKey),
-            "USER_KEY": .string(userKey)
-        ]
-    }
+    var props: [String: OpenFeature.Value] {[
+        "API_KEY": .string(apiKey),
+        "USER_KEY": .string(userKey)
+    ]}
     
     func keySet() -> Set<String> {
         [Constants.API_KEY.rawValue, Constants.USER_KEY.rawValue]

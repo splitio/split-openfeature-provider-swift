@@ -14,8 +14,6 @@ final class SplitProviderTests: XCTestCase {
     
     private let eventHandler = OpenFeature.EventHandler()
     
-    override func setUp() {}
-    
     override func tearDown() {
         providerCancellable?.cancel()
     }
@@ -156,7 +154,7 @@ extension SplitProviderTests {
         XCTAssertTrue(errorFired, "If there is no initialContext, an error should be fired")
     }
     
-    func testInitializationWithConfig() {
+    func testInitWithConfig() {
         
         let readyExp = expectation(description: "SDK Ready")
         let openFeatureExp = expectation(description: "OpenFeature Ready")
@@ -193,7 +191,7 @@ extension SplitProviderTests {
     
     func testTimeOut() {
         
-        let errorExp = expectation(description: "SDK should timeout")
+        let errorExp = expectation(description: "SDK should time out")
         
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
@@ -201,7 +199,7 @@ extension SplitProviderTests {
                 case .ready:
                     break
                 case .error(let errorCode, let message):
-                    if errorCode == .general && message == "Provider timed out" {
+                    if errorCode == .general && message == "Split Provider timed out" {
                         errorExp.fulfill()
                     }
                 default:
@@ -229,7 +227,7 @@ extension SplitProviderTests {
 // MARK: Evaluation Tests
 extension SplitProviderTests {
 
-    func testBooleanEvaluationTrue() throws {
+    func testBooleanTrue() throws {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "true"
@@ -242,17 +240,30 @@ extension SplitProviderTests {
         XCTAssertEqual(result.value, true)
     }
     
-    func testBooleanEvaluationWrong() throws {
+    func testBooleanCase() throws {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
-        client.treatment = "tru"
+        client.treatment = "tRuE"
 
         let provider = SplitProvider()
         provider.splitClient = client
         provider.evaluator = evaluator
 
         let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
-        XCTAssertEqual(result.value, false, "Treatment should be the default value")
+        XCTAssertEqual(result.value, true)
+    }
+    
+    func testBooleanEvaluationOn() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "on"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
+        XCTAssertEqual(result.value, true)
     }
     
     func testBooleanEvaluationFalse() throws {
@@ -264,7 +275,20 @@ extension SplitProviderTests {
         provider.splitClient = client
         provider.evaluator = evaluator
 
-        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
+        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: true, context: nil)
+        XCTAssertEqual(result.value, false)
+    }
+    
+    func testBooleanEvaluationOff() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "oFf"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: true, context: nil)
         XCTAssertEqual(result.value, false)
     }
 
@@ -305,5 +329,107 @@ extension SplitProviderTests {
 
         let result = try provider.getStringEvaluation(key: "flag", defaultValue: "default", context: nil)
         XCTAssertEqual(result.value, "hello")
+    }
+    
+    func testWrongEvaluationType() {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "tru"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+        
+        do {
+            _ = try provider.getIntegerEvaluation(key: "flag", defaultValue: 1, context: nil)
+        } catch {
+            XCTAssertEqual(error as? OpenFeatureError, OpenFeatureError.valueNotConvertableError)
+        }
+    }
+    
+    func testFlagWithConfig() {
+        let evaluation = expectation(description: "OpenFeature should evaluate")
+        let config = "{config: \"some config=4\"}"
+        var result: FlagEvaluationDetails<Bool>? = nil
+        
+        // Setup events observer
+        providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
+            switch event {
+                case .ready:
+                    result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
+            }
+        }
+        
+        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
+        provider = SplitProvider()
+        let factory = FactoryMock()
+        factory.getClient().treatment = "on"
+        factory.getClient().config = config
+        provider.factory = factory
+        
+        // Kickoff Provider
+        Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
+        wait(for: [evaluation], timeout: 3)
+
+        XCTAssertEqual(result?.flagMetadata["config"]?.asString(), config)
+    }
+    
+    func testInvalidFlag() throws {
+        var openFeatureError: OpenFeatureError?
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = SplitConstants.control // Simulate flag not found at the client level
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+        
+        do {
+            _ = try provider.getStringEvaluation(key: "flag", defaultValue: "default", context: nil)
+        } catch {
+            openFeatureError = (error as! OpenFeatureError)
+        }
+        
+        XCTAssertEqual(openFeatureError, OpenFeatureError.flagNotFoundError(key: "flag"))
+    }
+    
+    func testDefaultValueInCaseOfFailure() {
+        // This is actually testing the OpenFeature fallback, but since it's at the bridging point,
+        // I will leave it here for completeness and in case this behavior changes in the future.
+        
+        let evaluation = expectation(description: "OpenFeature should evaluate")
+        var result: Int64? = nil
+        let defaultResult: Int64 = 2
+        
+        // Setup events observer
+        providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
+            switch event {
+                case .ready:
+                    // In this case we are asking an Integer to a flag that evaluates to "on"
+                    result = OpenFeatureAPI.shared.getClient().getIntegerValue(key: "test", defaultValue: defaultResult)
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
+            }
+        }
+        
+        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
+        provider = SplitProvider()
+        let factory = FactoryMock()
+        factory.getClient().treatment = "on"
+        provider.factory = factory
+        
+        // Kickoff Provider
+        Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
+        wait(for: [evaluation], timeout: 3)
+
+        XCTAssertEqual(result, defaultResult)
     }
 }

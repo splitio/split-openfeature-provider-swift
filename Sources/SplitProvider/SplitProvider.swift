@@ -34,6 +34,7 @@ public class SplitProvider: FeatureProvider {
         // 1. Unpack Context
         let apiKeyValue = initialContext.getValue(key: Constants.API_KEY.rawValue)?.asString()
         let userKeyValue = initialContext.getValue(key: Constants.USER_KEY.rawValue)?.asString()
+        
         guard let API_KEY = apiKeyValue, apiKeyValue != "" else {
             eventHandler.send(.error(errorCode: .invalidContext, message: "Initialization data is missing for Split provider."))
             throw SplitError.missingInitData
@@ -60,9 +61,9 @@ public class SplitProvider: FeatureProvider {
                 didResume = true
                 
                 if error {
-                    eventHandler.send(.error(errorCode: .general, message: "Provider timed out"))
+                    eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out"))
                 } else {
-                    continuation.resume() // Pass control to openFeature again
+                    continuation.resume() // Pass control to OpenFeature again
                 }
             }
 
@@ -74,7 +75,14 @@ public class SplitProvider: FeatureProvider {
     
     // MARK: Context Change
     public func onContextSet(oldContext: (any OpenFeature.EvaluationContext)?, newContext: any OpenFeature.EvaluationContext) async throws {
-        throw SplitError.notImplemented
+        // 1. Destroy
+        factory = nil
+        evaluator = nil
+        splitClient?.destroy()
+        
+        // 2. Re-create
+        try await initialize(initialContext: newContext)
+        eventHandler.send(.contextChanged)
     }
 }
 
@@ -82,27 +90,27 @@ public class SplitProvider: FeatureProvider {
 extension SplitProvider {
     
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Bool> {
-        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
+        try evaluator.evaluate(key: key, type: Bool.self, context: context)
     }
 
     public func getStringEvaluation(key: String, defaultValue: String, context: (any EvaluationContext)?) throws -> ProviderEvaluation<String> {
-        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
+        try evaluator.evaluate(key: key, type: String.self, context: context)
     }
 
     public func getIntegerEvaluation(key: String, defaultValue: Int64, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Int64> {
-        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
+        try evaluator.evaluate(key: key, type: Int64.self, context: context)
     }
 
     public func getDoubleEvaluation(key: String, defaultValue: Double, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Double> {
-        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
+        try evaluator.evaluate(key: key, type: Double.self, context: context)
     }
 
     public func getObjectEvaluation(key: String, defaultValue: Value, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Value> {
-        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
+        throw OpenFeatureError.generalError(message: "Split SDK does not support object evaluation")
     }
 
     public func observe() -> AnyPublisher<OpenFeature.ProviderEvent?, Never> {
-        eventHandler.publisher.eraseToAnyPublisher() 
+        eventHandler.publisher.eraseToAnyPublisher()
     }
 }
 
@@ -110,4 +118,3 @@ extension SplitProvider {
 struct SplitProviderMetadata: ProviderMetadata {
     let name: String? = Constants.PROVIDER_NAME.rawValue
 }
-

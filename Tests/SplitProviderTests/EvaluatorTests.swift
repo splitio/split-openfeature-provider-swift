@@ -6,57 +6,71 @@ import OpenFeature
 
 final class EvaluatorTests: XCTestCase {
     
-    private func makeEvaluator(with treatment: String) -> Evaluator {
+    private func makeEvaluator(withTreatment treatment: String) -> Evaluator {
         let client = ClientMock()
         client.treatment = treatment
         return Evaluator(splitClient: client)
     }
     
-    func testBoolTrue() {
-        let SUT = makeEvaluator(with: "true")
-        let result = SUT.evaluate(key: "flag", defaultValue: false, context: nil)
+    func testBoolTrue() throws {
+        let SUT = makeEvaluator(withTreatment: "true")
+        let result = try SUT.evaluate(key: "flag", type: Bool.self, context: nil)
         XCTAssertEqual(result.value, true)
     }
     
-    func testBoolFalse() {
-        let SUT = makeEvaluator(with: "FA LSE")
-        let result = SUT.evaluate(key: "flag", defaultValue: true, context: nil)
+    func testBoolFalse() throws {
+        let SUT = makeEvaluator(withTreatment: "FALSE")
+        let result = try SUT.evaluate(key: "flag", type: Bool.self, context: nil)
         XCTAssertEqual(result.value, false)
     }
     
-    func testInt64() {
-        let SUT = makeEvaluator(with: "123")
-        let result = SUT.evaluate(key: "flag", defaultValue: Int64(0), context: nil)
+    func testInt64() throws {
+        let SUT = makeEvaluator(withTreatment: "123")
+        let result = try SUT.evaluate(key: "flag", type: Int64.self, context: nil)
         XCTAssertEqual(result.value, 123)
     }
     
-    func testDouble() {
-        let SUT = makeEvaluator(with: "3.14")
-        let result = SUT.evaluate(key: "flag", defaultValue: 0.0, context: nil)
+    func testDouble() throws {
+        let SUT = makeEvaluator(withTreatment: "3.14")
+        let result = try SUT.evaluate(key: "flag", type: Double.self, context: nil)
         XCTAssertEqual(result.value, 3.14, accuracy: 0.0001)
     }
     
-    func testString() {
-        let SUT = makeEvaluator(with: "banana")
-        let result = SUT.evaluate(key: "flag", defaultValue: "default", context: nil)
+    func testString() throws {
+        let SUT = makeEvaluator(withTreatment: "banana")
+        let result = try SUT.evaluate(key: "flag", type: String.self, context: nil)
         XCTAssertEqual(result.value, "banana")
     }
     
-    func testValue() {
-        let SUT = makeEvaluator(with: "json_string")
-        let result = SUT.evaluate(key: "flag", defaultValue: OpenFeature.Value.string("default"), context: nil)
+    func testValue() throws {
+        let SUT = makeEvaluator(withTreatment: "json_string")
+        let result = try SUT.evaluate(key: "flag", type: OpenFeature.Value.self, context: nil)
         XCTAssertEqual(result.value, .string("json_string"))
     }
     
-    func testInvalidTypeFallsBackToDefault() {
-        let SUT = makeEvaluator(with: "notAnInt")
-        let result = SUT.evaluate(key: "flag", defaultValue: Int64(42), context: nil)
-        XCTAssertEqual(result.value, 42, "Should return default when conversion fails")
+    func testInvalidTypeThrows() throws {
+        let SUT = makeEvaluator(withTreatment: "notAnInt")
+        var evaluationError = OpenFeatureError.invalidContextError
+        
+        do {
+            _ = try SUT.evaluate(key: "flag", type: Int64.self, context: nil)
+        } catch {
+            evaluationError = (error as? OpenFeatureError)!
+        }
+        
+        XCTAssertEqual(evaluationError, OpenFeatureError.valueNotConvertableError)
     }
     
-    func testWhenSplitClientIsNilReturnsControl() {
+    func testNilSplitClient() throws {
         let SUT = Evaluator(splitClient: nil)
-        let result = SUT.evaluate(key: "flag", defaultValue: "default", context: nil)
-        XCTAssertEqual(result.value, Constants.CONTROL.rawValue)
+        var evaluationError = OpenFeatureError.invalidContextError
+        
+        do {
+            _ = try SUT.evaluate(key: "flag", type: String.self, context: nil)
+        } catch {
+            evaluationError = (error as? OpenFeatureError)!
+        }
+        
+        XCTAssertEqual(evaluationError, OpenFeatureError.providerFatalError(message: "Split Client not found"))
     }
 }
