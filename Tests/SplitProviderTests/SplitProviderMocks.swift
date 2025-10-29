@@ -9,16 +9,21 @@ internal final class FactoryMock: SplitFactory {
     var manager: any SplitManager = SplitManagerMock()
     var userConsent: UserConsent = .granted
     var version: String = "1"
+    var clients = [Key: SplitClient]()
     
-    func client(key: Key) -> any SplitClient { ClientMock() }
-    func client(matchingKey: String) -> any SplitClient { ClientMock() }
+    func client(key: Key) -> any SplitClient {
+        guard let client = clients[key] else {
+            let client = ClientMock()
+            clients[key] = client
+            return client
+        }
+        
+        return client
+    }
+    
+    func client(matchingKey: String) -> any SplitClient { client(key: Key(matchingKey: matchingKey)) }
     func client(matchingKey: String, bucketingKey: String?) -> any SplitClient { ClientMock() }
     func setUserConsent(enabled: Bool) {}
-    
-    // For testing
-    func getClient() -> ClientMock {
-        client as! ClientMock
-    }
 }
 
 internal final class ClientMock: SplitClient {

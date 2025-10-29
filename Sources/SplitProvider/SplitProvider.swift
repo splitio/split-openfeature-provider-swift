@@ -11,20 +11,26 @@ public class SplitProvider: FeatureProvider {
     internal var splitClient: SplitClient?
     internal var splitClientConfig: SplitClientConfig?
     internal var factory: SplitFactory?
+    private var sdkKey: String
     
     // Open Feature Components
     public var hooks: [any OpenFeature.Hook] = []
     public var metadata: any OpenFeature.ProviderMetadata = SplitProviderMetadata()
     private let eventHandler = EventHandler()
-    private var splitContext: InitContext?
     internal var evaluator: Evaluator!
     
     // MARK: Custom Initialization
-    public init(_ config: SplitClientConfig? = nil) {
+    public init(key: String, config: SplitClientConfig? = nil) {
+        sdkKey = key
         splitClientConfig = config
     }
     
     public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws {
+        
+        guard sdkKey != "" else {
+            eventHandler.send(.error(errorCode: .invalidContext, message: "API key is missing for Split provider."))
+            throw SplitError.missingInitData
+        }
         
         guard let initialContext = initialContext else {
             eventHandler.send(.error(errorCode: .invalidContext, message: "Initialization context is missing for Split provider."))
@@ -32,36 +38,29 @@ public class SplitProvider: FeatureProvider {
         }
         
         // 1. Unpack Context
-        let apiKeyValue = initialContext.getValue(key: Constants.API_KEY.rawValue)?.asString()
-        let userKeyValue = initialContext.getValue(key: Constants.USER_KEY.rawValue)?.asString()
-        
-        guard let API_KEY = apiKeyValue, apiKeyValue != "" else {
-            eventHandler.send(.error(errorCode: .invalidContext, message: "Initialization data is missing for Split provider."))
-            throw SplitError.missingInitData
-        }
-        guard let USER_KEY = userKeyValue, userKeyValue != "" else {
-            eventHandler.send(.error(errorCode: .targetingKeyMissing, message: "Initialization data is missing for Split provider."))
+        let userKey = initialContext.getTargetingKey()
+        guard userKey != "" else {
+            eventHandler.send(.error(errorCode: .targetingKeyMissing, message: "Targeting key is missing for Split provider."))
             throw SplitError.missingInitData
         }
         
         // 2. Client setup
-        splitContext = InitContext(apiKey: API_KEY, userKey: USER_KEY)
-        let key: Key = Key(matchingKey: USER_KEY)
-        if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(API_KEY).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
-        splitClient = factory?.client
-        if evaluator == nil { evaluator = Evaluator(splitClient: splitClient) }
+        let key: Key = Key(matchingKey: userKey)
+        if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(sdkKey).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
+        splitClient = factory?.client(key: key)
+        evaluator = Evaluator(splitClient: splitClient)
 
         // 3. Subscribe to events and wait for SDK
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
 
             // Avoid crash by multiple countinuations
-            func resumeOnce(error: Bool = false) {
+            func resumeOnce(timeOut: Bool = false) {
                 guard !didResume else { return }
                 didResume = true
                 
-                if error {
-                    eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out"))
+                if timeOut {
+                    eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out."))
                 } else {
                     continuation.resume() // Pass control to OpenFeature again
                 }
@@ -69,18 +68,14 @@ public class SplitProvider: FeatureProvider {
 
             splitClient?.on(event: .sdkReady) { resumeOnce() }
             splitClient?.on(event: .sdkReadyFromCache) { resumeOnce() }
-            splitClient?.on(event: .sdkReadyTimedOut) { resumeOnce(error: true) }
+            splitClient?.on(event: .sdkReadyTimedOut) { resumeOnce(timeOut: true) }
         }
     }
     
     // MARK: Context Change
     public func onContextSet(oldContext: (any OpenFeature.EvaluationContext)?, newContext: any OpenFeature.EvaluationContext) async throws {
-        // 1. Destroy
-        factory = nil
-        evaluator = nil
-        splitClient?.destroy()
+        guard oldContext?.getTargetingKey() != newContext.getTargetingKey() else { return }
         
-        // 2. Re-create
         try await initialize(initialContext: newContext)
         eventHandler.send(.contextChanged)
     }

@@ -41,8 +41,8 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
-        provider = SplitProvider()
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
+        let context = ImmutableContext(targetingKey: "martin")
         provider.factory = FactoryMock()
         
         // Kickoff Provider
@@ -73,8 +73,8 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(apiKey: "", userKey: "martin")
-        provider = SplitProvider()
+        let context = ImmutableContext(targetingKey: "martin")
+        provider = SplitProvider(key: "")
         provider.factory = FactoryMock()
         
         // Kickoff Provider
@@ -106,8 +106,8 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "")
-        provider = SplitProvider()
+        let context = ImmutableContext(targetingKey: "")
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.factory = FactoryMock()
         
         // Kickoff Provider
@@ -125,7 +125,7 @@ extension SplitProviderTests {
         let openFeatureExp = expectation(description: "OpenFeature Ready")
         var errorFired = false
         
-        provider = SplitProvider()
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
@@ -141,7 +141,7 @@ extension SplitProviderTests {
             }
         }
         
-        provider = SplitProvider()
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.factory = FactoryMock()
         
         // Kickoff Provider
@@ -160,11 +160,11 @@ extension SplitProviderTests {
         let openFeatureExp = expectation(description: "OpenFeature Ready")
 
         // Config if needed
-        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
+        let context = ImmutableContext(targetingKey: "martin")
         let config = SplitClientConfig()
         config.logLevel = .verbose
         
-        provider = SplitProvider(config)
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746", config: config)
         provider.factory = FactoryMock()
         
         // Setup events observer
@@ -199,7 +199,7 @@ extension SplitProviderTests {
                 case .ready:
                     break
                 case .error(let errorCode, let message):
-                    if errorCode == .general && message == "Split Provider timed out" {
+                    if errorCode == .general && message == "Split Provider timed out." {
                         errorExp.fulfill()
                     }
                 default:
@@ -207,10 +207,11 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
-        provider = SplitProvider()
+        let context = ImmutableContext(targetingKey: "martin")
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         let factory = FactoryMock()
-        factory.getClient().timeout = true // MARK: Fail point
+        let client = factory.client(matchingKey: "martin") as! ClientMock
+        client.timeout = true // MARK: Fail point
         provider.factory = factory
         
         // Kickoff Provider
@@ -220,7 +221,7 @@ extension SplitProviderTests {
     }
     
     func testNameIsCorrect() {
-        XCTAssertTrue(SplitProvider().metadata.name == Constants.PROVIDER_NAME.rawValue)
+        XCTAssertTrue(SplitProvider(key: "sd87f65ds8fs6g8d65fba9sf6").metadata.name == Constants.PROVIDER_NAME.rawValue)
     }
 }
 
@@ -232,7 +233,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "true"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -245,7 +246,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "tRuE"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -258,7 +259,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "on"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -271,7 +272,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "false"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -284,7 +285,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "oFf"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -297,7 +298,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "123"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -310,7 +311,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "3.14"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -323,7 +324,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "hello"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
 
@@ -336,7 +337,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "tru"
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
         
@@ -365,11 +366,12 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
-        provider = SplitProvider()
+        let context = ImmutableContext(targetingKey: "martin")
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         let factory = FactoryMock()
-        factory.getClient().treatment = "on"
-        factory.getClient().config = config
+        var client = factory.client(matchingKey: "martin") as! ClientMock
+        client.treatment = "on"
+        client.config = config
         provider.factory = factory
         
         // Kickoff Provider
@@ -385,7 +387,7 @@ extension SplitProviderTests {
         let evaluator = Evaluator(splitClient: client)
         client.treatment = SplitConstants.control // Simulate flag not found at the client level
 
-        let provider = SplitProvider()
+        let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
         
@@ -420,10 +422,11 @@ extension SplitProviderTests {
             }
         }
         
-        let context = InitContext(apiKey: "sofd75fo7w6ao576oshf567jshdkfrbk746", userKey: "martin")
-        provider = SplitProvider()
+        let context = ImmutableContext(targetingKey: "martin")
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         let factory = FactoryMock()
-        factory.getClient().treatment = "on"
+        var client = factory.client(matchingKey: "martin") as! ClientMock
+        client.treatment = "on"
         provider.factory = factory
         
         // Kickoff Provider
