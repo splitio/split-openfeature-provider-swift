@@ -17,7 +17,7 @@ public class SplitProvider: FeatureProvider {
     public var hooks: [any OpenFeature.Hook] = []
     public var metadata: any OpenFeature.ProviderMetadata = SplitProviderMetadata()
     private let eventHandler = EventHandler()
-    internal var evaluator: Evaluator!
+    internal var evaluator = Evaluator()
     
     // MARK: Custom Initialization
     public init(key: String, config: SplitClientConfig? = nil) {
@@ -46,29 +46,30 @@ public class SplitProvider: FeatureProvider {
         
         // 2. Client setup
         let key: Key = Key(matchingKey: userKey)
-        if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(sdkKey).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
+        if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(sdkKey).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
         splitClient = factory?.client(key: key)
-        evaluator = Evaluator(splitClient: splitClient)
+        evaluator.setClient(splitClient)
 
         // 3. Subscribe to events and wait for SDK
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
+            
+            splitClient?.on(event: .sdkReady) { resume() }
+            splitClient?.on(event: .sdkReadyFromCache) { resume() }
+            splitClient?.on(event: .sdkReadyTimedOut) { resume(timeOut: true) }
 
             // Avoid crash by multiple countinuations
-            func resumeOnce(timeOut: Bool = false) {
+            func resume(timeOut: Bool = false) {
                 guard !didResume else { return }
                 didResume = true
                 
                 if timeOut {
                     eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out."))
-                } else {
-                    continuation.resume() // Pass control to OpenFeature again
                 }
+                
+                // Return control to OpenFeature
+                continuation.resume()
             }
-
-            splitClient?.on(event: .sdkReady) { resumeOnce() }
-            splitClient?.on(event: .sdkReadyFromCache) { resumeOnce() }
-            splitClient?.on(event: .sdkReadyTimedOut) { resumeOnce(timeOut: true) }
         }
     }
     
@@ -111,5 +112,5 @@ extension SplitProvider {
 
 // MARK: Open Feature
 struct SplitProviderMetadata: ProviderMetadata {
-    let name: String? = Constants.PROVIDER_NAME.rawValue
+    let name: String? = "Split"
 }

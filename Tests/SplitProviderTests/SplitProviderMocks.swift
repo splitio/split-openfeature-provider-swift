@@ -22,7 +22,7 @@ internal final class FactoryMock: SplitFactory {
     }
     
     func client(matchingKey: String) -> any SplitClient { client(key: Key(matchingKey: matchingKey)) }
-    func client(matchingKey: String, bucketingKey: String?) -> any SplitClient { ClientMock() }
+    func client(matchingKey: String, bucketingKey: String?) -> any SplitClient { client(matchingKey: matchingKey) }
     func setUserConsent(enabled: Bool) {}
 }
 

@@ -5,9 +5,13 @@ import OpenFeature
 
 final class Evaluator {
     
-    private let splitClient: SplitClient?
+    private var splitClient: SplitClient?
     
-    init(splitClient: SplitClient?) {
+    init(splitClient: SplitClient? = nil) {
+        self.splitClient = splitClient
+    }
+    
+    internal func setClient(_ splitClient: SplitClient?) {
         self.splitClient = splitClient
     }
     

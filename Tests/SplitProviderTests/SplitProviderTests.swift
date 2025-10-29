@@ -11,7 +11,6 @@ final class SplitProviderTests: XCTestCase {
     
     private var provider: SplitProvider!
     private var providerCancellable: AnyCancellable?
-    
     private let eventHandler = OpenFeature.EventHandler()
     
     override func tearDown() {
@@ -221,7 +220,7 @@ extension SplitProviderTests {
     }
     
     func testNameIsCorrect() {
-        XCTAssertTrue(SplitProvider(key: "sd87f65ds8fs6g8d65fba9sf6").metadata.name == Constants.PROVIDER_NAME.rawValue)
+        XCTAssertTrue(SplitProvider(key: "sd87f65ds8fs6g8d65fba9sf6").metadata.name == SplitProviderMetadata().name)
     }
 }
 
@@ -369,7 +368,7 @@ extension SplitProviderTests {
         let context = ImmutableContext(targetingKey: "martin")
         provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         let factory = FactoryMock()
-        var client = factory.client(matchingKey: "martin") as! ClientMock
+        let client = factory.client(matchingKey: "martin") as! ClientMock
         client.treatment = "on"
         client.config = config
         provider.factory = factory
@@ -425,7 +424,7 @@ extension SplitProviderTests {
         let context = ImmutableContext(targetingKey: "martin")
         provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         let factory = FactoryMock()
-        var client = factory.client(matchingKey: "martin") as! ClientMock
+        let client = factory.client(matchingKey: "martin") as! ClientMock
         client.treatment = "on"
         provider.factory = factory
         
