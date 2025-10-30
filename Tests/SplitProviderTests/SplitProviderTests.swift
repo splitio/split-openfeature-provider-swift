@@ -64,7 +64,7 @@ extension SplitProviderTests {
                 case .ready:
                     break
                 case .error(let errorCode, _):
-                    if errorCode == .invalidContext {
+                    if errorCode == .providerFatal {
                         errorFired = true
                     }
                 default:
