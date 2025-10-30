@@ -665,7 +665,7 @@ extension SplitProviderTests {
         provider.evaluator = evaluator
 
         XCTAssertThrowsError(try provider.getObjectEvaluation(key: "flag", defaultValue: Value.null, context: nil)) { error in
-            XCTAssertEqual(error as? OpenFeatureError, OpenFeatureError.parseError(message: "Treatment must be a JSON object"))
+            XCTAssertEqual(error as? OpenFeatureError, OpenFeatureError.parseError(message: "Failed to parse JSON treatment"))
         }
     }
 
