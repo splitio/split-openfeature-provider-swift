@@ -20,13 +20,17 @@ public class SplitProvider: FeatureProvider {
     private let eventHandler = EventHandler()
     internal var evaluator = Evaluator()
     
-    // MARK: Init
-    public init(key: String, config: SplitClientConfig? = nil) {
+    // MARK: Inits
+    internal init(key: String, config: SplitClientConfig? = nil) {
         sdkKey = key
         splitClientConfig = config
     }
     
-    public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws {
+    public init(key: String) {
+        sdkKey = key
+    }
+    
+    public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws { // Called by OpenFeature
         
         guard sdkKey != "" else {
             eventHandler.send(.error(errorCode: .providerFatal, message: "API key is missing for Split provider."))
@@ -52,9 +56,13 @@ public class SplitProvider: FeatureProvider {
             eventHandler.send(.error(errorCode: .providerFatal, message: "Split Provider failed to initialize correctly."))
             return
         }
+        evaluator.setClient(splitClient)
+        
+        if startedClients.contains(userKey) { return }
 
-        // 3. Subscribe to events and wait for SDK
-        await startClient(splitClient, userKey: userKey)
+        // 3. If it's a new client, wait for init & register it to avoid init deadlock after onContextSet
+        await startClient(splitClient)
+        startedClients.append(userKey)
     }
         
     // MARK: Context change
@@ -67,27 +75,23 @@ public class SplitProvider: FeatureProvider {
         eventHandler.send(.contextChanged)
     }
     
-    // MARK: Client start
-    private func startClient(_ splitClient: SplitClient, userKey: String) async {
-        evaluator.setClient(splitClient)
+    // MARK: Events Linking
+    private func startClient(_ splitClient: SplitClient) async {
         
-        if startedClients.contains(userKey) { return }
+        splitClient.on(event: .sdkUpdated) { [weak self] in
+            self?.eventHandler.send(.configurationChanged)
+        }
         
-        // Subscribe to SDK Events
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
             
+            // OpenFeature .ready event is fired by OpenFeature, so no need to add it here too
             splitClient.on(event: .sdkReady) {
                 resume()
             }
             
             splitClient.on(event: .sdkReadyFromCache) { [weak self] in
                 self?.eventHandler.send(.stale)
-                resume()
-            }
-            
-            splitClient.on(event: .sdkUpdated) { [weak self] in
-                self?.eventHandler.send(.configurationChanged)
                 resume()
             }
             
@@ -102,9 +106,6 @@ public class SplitProvider: FeatureProvider {
                 if timeOut {
                     eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out."))
                 }
-                
-                // Register as already started (to avoid init deadlock after onContextSet)
-                startedClients.append(userKey)
                 
                 // Return control to OpenFeature
                 continuation.resume()
