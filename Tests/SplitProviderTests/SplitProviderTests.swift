@@ -423,11 +423,11 @@ extension SplitProviderTests {
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
                 case .ready:
-                    
+                
                     // Pass attributes as context change (only valid form supported for now by Open Feature)
                     let context = ImmutableContext(targetingKey: "martin", structure: ImmutableStructure(attributes: ["someKey": OpenFeature.Value.integer(expectedResult)]))
                     OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
-                    
+                
                     result = OpenFeatureAPI.shared.getClient().getStringValue(key: "test", defaultValue: "")
                     evaluation.fulfill()
                 case .error(_, _):
