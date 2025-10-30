@@ -20,25 +20,28 @@ public class SplitProvider: FeatureProvider {
     private let eventHandler = EventHandler()
     internal var evaluator = Evaluator()
     
-    // MARK: Custom Initialization
-    public init(key: String, config: SplitClientConfig? = nil) {
+    // MARK: Inits
+    internal init(key: String, config: SplitClientConfig? = nil) {
         sdkKey = key
         splitClientConfig = config
     }
     
-    public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws {
+    public init(key: String) {
+        sdkKey = key
+    }
+    
+    public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws { // Called by OpenFeature
         
         guard sdkKey != "" else {
-            eventHandler.send(.error(errorCode: .invalidContext, message: "API key is missing for Split provider."))
+            eventHandler.send(.error(errorCode: .providerFatal, message: "API key is missing for Split provider."))
             throw SplitError.missingInitData
         }
         
+        // 1. Unpack Context
         guard let initialContext = initialContext else {
             eventHandler.send(.error(errorCode: .invalidContext, message: "Initialization context is missing for Split provider."))
             throw SplitError.missingInitContext
         }
-        
-        // 1. Unpack Context
         let userKey = initialContext.getTargetingKey()
         guard userKey != "" else {
             eventHandler.send(.error(errorCode: .targetingKeyMissing, message: "Targeting key is missing for Split provider."))
@@ -50,50 +53,59 @@ public class SplitProvider: FeatureProvider {
         splitClientConfig?.logLevel = .verbose
         if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(sdkKey).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
         guard let splitClient = factory?.client(key: key) else {
-            eventHandler.send(.error(errorCode: .general, message: "Split Provider failed to initialize correctly."))
+            eventHandler.send(.error(errorCode: .providerFatal, message: "Split Provider failed to initialize correctly."))
             return
         }
+        evaluator.setClient(splitClient)
+        
+        if startedClients.contains(userKey) { return }
 
-        // 3. Subscribe to events and wait for SDK
-        await startClient(splitClient, userKey: userKey)
+        // 3. If it's a new client, wait for init & register it to avoid init deadlock after onContextSet
+        await startClient(splitClient)
+        startedClients.append(userKey)
     }
         
-    // MARK: Context Change
+    // MARK: Context change
     public func onContextSet(oldContext: (any OpenFeature.EvaluationContext)?, newContext: any OpenFeature.EvaluationContext) async throws {
         // Even if it's the same targeting key, we need to update the context if the options change
-        // since this is the only way to evaluating with attributes.
+        // since this is the only way to evaluate with attributes.
         guard newContext.isDifferent(oldContext) else { return }
         
         try await initialize(initialContext: newContext)
         eventHandler.send(.contextChanged)
     }
     
-    private func startClient(_ splitClient: SplitClient, userKey: String) async {
-        evaluator.setClient(splitClient)
+    // MARK: Events Linking
+    private func startClient(_ splitClient: SplitClient) async {
         
-        if startedClients.contains(userKey) { return }
+        splitClient.on(event: .sdkUpdated) { [weak self] in
+            self?.eventHandler.send(.configurationChanged)
+        }
         
-        // Subscribe to SDK Events
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
             
-            splitClient.on(event: .sdkReady) { resume() }
+            // OpenFeature .ready event is fired by OpenFeature, so no need to add it here too
+            splitClient.on(event: .sdkReady) {
+                resume()
+            }
             
-            splitClient.on(event: .sdkReadyFromCache) { resume() }
+            splitClient.on(event: .sdkReadyFromCache) { [weak self] in
+                self?.eventHandler.send(.stale)
+                resume()
+            }
             
-            splitClient.on(event: .sdkReadyTimedOut) { resume(timeOut: true) }
+            splitClient.on(event: .sdkReadyTimedOut) {
+                resume(timeOut: true)
+            }
 
-            // Avoid crash by multiple countinuations
             func resume(timeOut: Bool = false) {
-                guard !didResume else { return }
+                guard !didResume else { return } // Avoid crash by multiple countinuation calls
                 didResume = true
                 
                 if timeOut {
                     eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out."))
                 }
-                
-                // Register as already started (to avoid init deadlock after onContextSet)
-                startedClients.append(userKey)
                 
                 // Return control to OpenFeature
                 continuation.resume()
@@ -136,7 +148,7 @@ struct SplitProviderMetadata: ProviderMetadata {
     let name: String? = "Split"
 }
 
-extension EvaluationContext {
+private extension EvaluationContext {
     func isDifferent(_ other: EvaluationContext?) -> Bool {
         getTargetingKey() != other?.getTargetingKey() || asObjectMap() != other?.asObjectMap()
     }

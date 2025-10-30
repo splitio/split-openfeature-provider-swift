@@ -64,7 +64,7 @@ extension SplitProviderTests {
                 case .ready:
                     break
                 case .error(let errorCode, _):
-                    if errorCode == .invalidContext {
+                    if errorCode == .providerFatal {
                         errorFired = true
                     }
                 default:
@@ -509,7 +509,10 @@ extension SplitProviderTests {
 
         XCTAssertEqual(result, defaultResult)
     }
-    
+}
+
+// MARK: Context change tests
+extension SplitProviderTests {
     func testOnContextSetSameContext() async throws {
         let provider = SplitProviderMock(key: "dummy-key")
         provider.factory = FactoryMock()
