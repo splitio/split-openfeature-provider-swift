@@ -5,7 +5,7 @@ This Provider is designed to enable the use of OpenFeature in iOS, with Split as
 
 ## Compatibility
 The Split OpenFeature Provider supports:
-- iOS ?)
+- iOS 14+
 
 ## Getting started
 Below is a simple example that describes the instantiation of the Split Provider. Please see the [OpenFeature Documentation](https://docs.openfeature.dev/docs/reference/concepts/evaluation-api) for details on how to use the OpenFeature SDK.
@@ -101,33 +101,27 @@ let result = client.getBooleanDetails("premium-feature", false, context)
 The Split OpenFeature Provider emits events when the provider state changes. You can observe these events to react to provider readiness, configuration changes, or errors.
 
 ```swift
-import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
-import kotlinx.coroutines.launch
+import Combine
 
-// Observe provider events
-lifecycleScope.launch {
-    provider.observe().collect { event ->
-        when (event) {
-            is OpenFeatureProviderEvents.ProviderReady -> {
-                // Provider is ready to evaluate flags
-                Log.d("Split", "Provider is ready")
-            }
-            is OpenFeatureProviderEvents.ProviderConfigurationChanged -> {
-                // Flag configuration has been updated
-                Log.d("Split", "Configuration changed")
-            }
-            is OpenFeatureProviderEvents.ProviderStale -> {
-                // Provider is serving cached data
-                Log.d("Split", "Provider is stale")
-            }
-            is OpenFeatureProviderEvents.ProviderError -> {
-                // An error occurred
-                Log.e("Split", "Provider error: ${event.error}")
-            }
-        }
+let cancellable = OpenFeatureAPI.shared.observe().sink { event in
+    switch event {
+    case ProviderEvent.ready:
+        // ...
+    case ProviderEvent.stale:
+        // ...
+    case ProviderEvent.configurationChanges:
+        // ...
+    case ProviderEvent.contextChanged:
+        // ...
+    case ProviderEvent.error(let errorCode, let message):
+        // ...
+    default:
+        // ...
     }
 }
 ```
+
+Refer to this official documentation to see the supported events: 
 
 ## Contributing
 Please see [Contributors Guide](CONTRIBUTORS-GUIDE.md) to find all you need to submit a Pull Request (PR).
