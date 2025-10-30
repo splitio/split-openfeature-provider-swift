@@ -355,13 +355,13 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-            case .ready:
-                result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
-                evaluation.fulfill()
-            case .error(_, _):
-                break
-            default:
-                break
+                case .ready:
+                    result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
             }
         }
         
@@ -388,13 +388,13 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-            case .ready:
-                result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
-                evaluation.fulfill()
-            case .error(_, _):
-                break
-            default:
-                break
+                case .ready:
+                    result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
             }
         }
         
@@ -485,14 +485,14 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-            case .ready:
-                // In this case we are asking an Integer to a flag that evaluates to "on"
-                result = OpenFeatureAPI.shared.getClient().getIntegerValue(key: "test", defaultValue: defaultResult)
-                evaluation.fulfill()
-            case .error(_, _):
-                break
-            default:
-                break
+                case .ready:
+                    // In this case we are asking an Integer to a flag that evaluates to "on"
+                    result = OpenFeatureAPI.shared.getClient().getIntegerValue(key: "test", defaultValue: defaultResult)
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
             }
         }
         
