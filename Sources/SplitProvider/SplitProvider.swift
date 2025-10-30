@@ -21,7 +21,7 @@ public class SplitProvider: FeatureProvider {
     internal var evaluator = Evaluator()
     
     // MARK: Inits
-    public init(key: String, config: SplitClientConfig? = nil) {
+    internal init(key: String, config: SplitClientConfig? = nil) {
         sdkKey = key
         splitClientConfig = config
     }
