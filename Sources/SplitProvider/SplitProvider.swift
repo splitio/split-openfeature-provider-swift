@@ -12,6 +12,7 @@ public class SplitProvider: FeatureProvider {
     internal var splitClientConfig: SplitClientConfig?
     internal var factory: SplitFactory?
     private var sdkKey: String
+    private var startedClients: [String] = []
     
     // Open Feature Components
     public var hooks: [any OpenFeature.Hook] = []
@@ -46,17 +47,41 @@ public class SplitProvider: FeatureProvider {
         
         // 2. Client setup
         let key: Key = Key(matchingKey: userKey)
+        splitClientConfig?.logLevel = .verbose
         if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(sdkKey).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
-        splitClient = factory?.client(key: key)
-        evaluator.setClient(splitClient)
+        guard let splitClient = factory?.client(key: key) else {
+            eventHandler.send(.error(errorCode: .general, message: "Split Provider failed to initialize correctly."))
+            return
+        }
 
         // 3. Subscribe to events and wait for SDK
+        await startClient(splitClient, userKey: userKey)
+    }
+        
+    // MARK: Context Change
+    public func onContextSet(oldContext: (any OpenFeature.EvaluationContext)?, newContext: any OpenFeature.EvaluationContext) async throws {
+        // Even if it's the same targeting key, we need to update the context if the options change
+        // since this is the only way to evaluating with attributes.
+        guard newContext.isDifferent(oldContext) else { return }
+        
+        try await initialize(initialContext: newContext)
+        eventHandler.send(.contextChanged)
+    }
+    
+    private func startClient(_ splitClient: SplitClient, userKey: String) async {
+        evaluator.setClient(splitClient)
+        
+        if startedClients.contains(userKey) { return }
+        
+        // Subscribe to SDK Events
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
             
-            splitClient?.on(event: .sdkReady) { resume() }
-            splitClient?.on(event: .sdkReadyFromCache) { resume() }
-            splitClient?.on(event: .sdkReadyTimedOut) { resume(timeOut: true) }
+            splitClient.on(event: .sdkReady) { resume() }
+            
+            splitClient.on(event: .sdkReadyFromCache) { resume() }
+            
+            splitClient.on(event: .sdkReadyTimedOut) { resume(timeOut: true) }
 
             // Avoid crash by multiple countinuations
             func resume(timeOut: Bool = false) {
@@ -67,19 +92,15 @@ public class SplitProvider: FeatureProvider {
                     eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out."))
                 }
                 
+                // Register as already started (to avoid init deadlock after onContextSet)
+                startedClients.append(userKey)
+                
                 // Return control to OpenFeature
                 continuation.resume()
             }
         }
     }
-    
-    // MARK: Context Change
-    public func onContextSet(oldContext: (any OpenFeature.EvaluationContext)?, newContext: any OpenFeature.EvaluationContext) async throws {
-        guard oldContext?.getTargetingKey() != newContext.getTargetingKey() else { return }
-        
-        try await initialize(initialContext: newContext)
-        eventHandler.send(.contextChanged)
-    }
+
 }
 
 // MARK: Evaluation Methods
@@ -113,4 +134,10 @@ extension SplitProvider {
 // MARK: Open Feature
 struct SplitProviderMetadata: ProviderMetadata {
     let name: String? = "Split"
+}
+
+extension EvaluationContext {
+    func isDifferent(_ other: EvaluationContext?) -> Bool {
+        getTargetingKey() != other?.getTargetingKey() || asObjectMap() != other?.asObjectMap()
+    }
 }

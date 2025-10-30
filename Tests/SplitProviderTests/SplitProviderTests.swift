@@ -380,6 +380,81 @@ extension SplitProviderTests {
         XCTAssertEqual(result?.flagMetadata["config"]?.asString(), config)
     }
     
+    func testWithConfig() {
+        let evaluation = expectation(description: "OpenFeature should evaluate")
+        let config = "{config: \"some config=4\"}"
+        var result: FlagEvaluationDetails<Bool>? = nil
+        
+        // Setup events observer
+        providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
+            switch event {
+                case .ready:
+                    result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
+            }
+        }
+        
+        let context = ImmutableContext(targetingKey: "martin")
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
+        let factory = FactoryMock()
+        let client = factory.client(matchingKey: "martin") as! ClientMock
+        client.treatment = "on"
+        client.config = config
+        provider.factory = factory
+        
+        // Kickoff Provider
+        Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
+        wait(for: [evaluation], timeout: 3)
+
+        XCTAssertEqual(result?.flagMetadata["config"]?.asString(), config)
+    }
+    
+    func testWithAttributes() {
+        let openFeatureReady = expectation(description: "OpenFeature should be ready")
+        let evaluation = expectation(description: "OpenFeature should evaluate")
+        var result: String? = nil
+        let expectedResult: Int64 = 50
+        
+        // Setup events observer
+        providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
+            switch event {
+                case .ready:
+                
+                    // Pass attributes as context change (only valid form supported for now by Open Feature)
+                    let context = ImmutableContext(targetingKey: "martin", structure: ImmutableStructure(attributes: ["someKey": OpenFeature.Value.integer(expectedResult)]))
+                    OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
+                
+                    result = OpenFeatureAPI.shared.getClient().getStringValue(key: "test", defaultValue: "")
+                    evaluation.fulfill()
+                case .error(_, _):
+                    break
+                default:
+                    break
+            }
+        }
+        
+        let context = ImmutableContext(targetingKey: "martin")
+        provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
+        let factory = FactoryMock()
+        let client = factory.client(matchingKey: "martin") as! ClientMock
+        client.treatment = "on"
+        client.attributes["someKey"] = expectedResult
+        provider.factory = factory
+        
+        // Kickoff Provider
+        Task {
+            await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context)
+            openFeatureReady.fulfill()
+        }
+        wait(for: [openFeatureReady, evaluation], timeout: 3)
+
+        XCTAssertEqual(result, "on-\(expectedResult)")
+    }
+    
     func testInvalidFlag() throws {
         var openFeatureError: OpenFeatureError?
         let client = ClientMock()
@@ -433,5 +508,56 @@ extension SplitProviderTests {
         wait(for: [evaluation], timeout: 3)
 
         XCTAssertEqual(result, defaultResult)
+    }
+    
+    func testOnContextSetSameContext() async throws {
+        let provider = SplitProviderMock(key: "dummy-key")
+        provider.factory = FactoryMock()
+        let oldContext = ImmutableContext(targetingKey: "user_123")
+        let newContext = ImmutableContext(targetingKey: "user_123")
+
+        try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+
+        XCTAssertEqual(provider.initializeCalled, false, "initialize() should NOT be called if context is equal")
+    }
+    
+    func testContextSetDifferentContext() async throws {
+        let provider = SplitProviderMock(key: "dummy-key")
+        provider.factory = FactoryMock()
+        let oldContext = ImmutableContext(targetingKey: "user_123")
+        let newContext = ImmutableContext(targetingKey: "user_124")
+
+        try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+
+        XCTAssertEqual(provider.initializeCalled, true, "initialize() should be called if targeting Key is different")
+    }
+    
+    func testContextSetSameContextWithAttributes() async throws {
+        let provider = SplitProviderMock(key: "dummy-key")
+        provider.factory = FactoryMock()
+        let oldContext = ImmutableContext(targetingKey: "user_123", structure: ImmutableStructure(attributes: ["foo": OpenFeature.Value.string("bar")]))
+        let newContext = ImmutableContext(targetingKey: "user_123", structure: ImmutableStructure(attributes: ["foo": OpenFeature.Value.string("bar")]))
+
+        try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+
+        XCTAssertEqual(provider.initializeCalled, false, "initialize() should NOT be called if context is equal")
+    }
+    
+    func testContextSetDifferentContextSameKey() async throws {
+        let provider = SplitProviderMock(key: "dummy-key")
+        provider.factory = FactoryMock()
+        let oldContext = ImmutableContext(targetingKey: "user_123", structure: ImmutableStructure(attributes: ["foo": OpenFeature.Value.string("bar")]))
+        let newContext = ImmutableContext(targetingKey: "user_123", structure: ImmutableStructure(attributes: ["foo": OpenFeature.Value.string("BAR")]))
+
+        try await provider.onContextSet(oldContext: oldContext, newContext: newContext)
+
+        XCTAssertEqual(provider.initializeCalled, true, "initialize() should be called if attributes are different even for the same key")
+    }
+}
+
+fileprivate class SplitProviderMock: SplitProvider {
+    var initializeCalled = false
+    override func initialize(initialContext: EvaluationContext?) async throws {
+        initializeCalled = true
     }
 }

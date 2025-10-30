@@ -6,7 +6,7 @@ import OpenFeature
 
 final class EvaluatorTests: XCTestCase {
     
-    private func makeEvaluator(withTreatment treatment: String) -> Evaluator {
+    private func makeEvaluator(withTreatment treatment: String = "defaultTreatment") -> Evaluator {
         let client = ClientMock()
         client.treatment = treatment
         return Evaluator(splitClient: client)

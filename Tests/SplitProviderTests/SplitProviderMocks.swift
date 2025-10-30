@@ -30,6 +30,7 @@ internal final class ClientMock: SplitClient {
     var treatment = "Treatment"
     var config: String? = nil
     var timeout = false
+    var attributes: [String: Any] = [:]
     
     init() {
         print(":: Mock Client started")
@@ -45,7 +46,7 @@ internal final class ClientMock: SplitClient {
     }
     
     func getTreatments(splits: [String], attributes: [String : Any]?) -> [String : String] {
-        [treatment:treatment]
+        [treatment: treatment]
     }
     
     func getTreatmentWithConfig(_ split: String) -> SplitResult {
@@ -53,7 +54,12 @@ internal final class ClientMock: SplitClient {
     }
     
     func getTreatmentWithConfig(_ split: String, attributes: [String : Any]?) -> SplitResult {
-        SplitResult(treatment: treatment, config: config)
+        
+        if let attribute = attributes?["someKey"] { // Simulate attributes processing
+            treatment = "\(treatment)-\(attribute)"
+        }
+        
+        return SplitResult(treatment: treatment, config: config)
     }
     
     func getTreatmentsWithConfig(splits: [String], attributes: [String : Any]?) -> [String : SplitResult] {

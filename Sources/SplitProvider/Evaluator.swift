@@ -11,7 +11,7 @@ final class Evaluator {
         self.splitClient = splitClient
     }
     
-    internal func setClient(_ splitClient: SplitClient?) {
+    internal func setClient(_ splitClient: SplitClient) {
         self.splitClient = splitClient
     }
     
@@ -45,7 +45,7 @@ final class Evaluator {
         }
         
         // Unpack and propagate error if result is CONTROL
-        let treatment = client.getTreatmentWithConfig(key, attributes: context?.asMap())
+        let treatment = client.getTreatmentWithConfig(key, attributes: mapAttributes(context?.asMap()))
         guard treatment.treatment != SplitConstants.control else {
             throw OpenFeatureError.flagNotFoundError(key: key)
         }
@@ -55,11 +55,36 @@ final class Evaluator {
             throw OpenFeatureError.valueNotConvertableError
         }
         
-        return ProviderEvaluation(value: value, flagMetadata: map(treatment.config))
+        return ProviderEvaluation(value: value, flagMetadata: mapConfig(treatment.config))
+    }
+    
+    // Map OpenFeature EvaluationContext to Split SDK attributes
+    private func mapAttributes(_ context: [String: OpenFeature.Value]?) -> [String: String]? {
+        guard let context = context else { return nil }
+        
+        var result: [String: String] = [:]
+        
+        for (key, value) in context {
+            switch value {
+                case .string(let str):
+                    result[key] = str
+                case .boolean(let bool):
+                    result[key] = String(bool)
+                case .integer(let int):
+                    result[key] = String(int)
+                case .double(let dbl):
+                    result[key] = String(dbl)
+                case .structure(_):
+                    break
+                default:
+                    continue
+                }
+        }
+        return result
     }
     
     // Map Split SDK treatment config to Open Feature FlagMetadata
-    fileprivate func map(_ config: String?) -> [String: FlagMetadataValue] {
+    private func mapConfig(_ config: String?) -> [String: FlagMetadataValue] {
         ["config": FlagMetadataValue.string(config ?? "")]
     }
 }
