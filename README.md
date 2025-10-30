@@ -14,6 +14,10 @@ Below is a simple example that describes the instantiation of the Split Provider
 
 Add the Split OpenFeature Provider dependency to your XCode project via Swift Package Manager.
 
+```swift
+.package(url: "https://github.com/splitio/split-openfeature-provider-swift", from: "1.0.0")
+```
+
 ### Usage
 
 The Split OpenFeature Provider requires an iOS `Context` and your Split SDK key. You must also provide an evaluation context with a targeting key when initializing the provider.
@@ -49,18 +53,6 @@ Task {
     let client = OpenFeatureAPI.getClient()
     let flagEvaluationResult = client.getBooleanValue("new-feature", false)
 }
-```
-
-### Configuring the underlying Split client
-
-It is possible to configure the Split client through the SplitClientConfig object, as shown below:
-
-```swift
-// Config if needed
-let config = SplitClientConfig()
-config.logLevel = .verbose
-
-provider = SplitProvider(key: "r71jiucv9pkglvfa4ufhngtgss23ht7lrf23", config: config)
 ```
 
 ### Evaluation Context
@@ -121,7 +113,7 @@ let cancellable = OpenFeatureAPI.shared.observe().sink { event in
 }
 ```
 
-Refer to this official documentation to see the supported events: 
+Refer to the official Open Feature documentation to see the supported events: https://openfeature.dev/specification/types#provider-events
 
 ## Contributing
 Please see [Contributors Guide](CONTRIBUTORS-GUIDE.md) to find all you need to submit a Pull Request (PR).
