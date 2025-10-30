@@ -19,11 +19,11 @@ final class SplitProviderTests: XCTestCase {
     override func tearDown() {
         providerCancellable?.cancel()
     }
+}
 
-    func testNameIsCorrect() {
-        XCTAssertTrue(SplitProvider().metadata.name == Constants.PROVIDER_NAME.rawValue)
-    }
-    
+// MARK: Setup Tests
+extension SplitProviderTests {
+   
     func testCorrectInitialization() {
         
         let readyExp = expectation(description: "SDK Ready")
@@ -36,7 +36,7 @@ final class SplitProviderTests: XCTestCase {
             switch event {
                 case .ready:
                     readyExp.fulfill()
-                case .error(let errorCode, _):
+                case .error:
                     nonErrorExp.fulfill()
                 default:
                     break
@@ -130,10 +130,10 @@ final class SplitProviderTests: XCTestCase {
         provider = SplitProvider()
         
         // Setup events observer
-        providerCancellable = OpenFeatureAPI.shared.observe().sink { [weak self] event in
+        providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
                 case .ready:
-                    self?.eval("mauro-test-flag")
+                    break
                 case .error(let errorCode, _):
                     if errorCode == .invalidContext {
                         errorFired = true
@@ -220,13 +220,90 @@ final class SplitProviderTests: XCTestCase {
 
         wait(for: [errorExp], timeout: 4)
     }
+    
+    func testNameIsCorrect() {
+        XCTAssertTrue(SplitProvider().metadata.name == Constants.PROVIDER_NAME.rawValue)
+    }
+}
 
-    fileprivate func eval(_ flag: String) {
-        do {
-            let eval = try provider.getStringEvaluation(key: flag, defaultValue: "", context: nil)
-            print("Flag value:", eval.value)
-        } catch {
-            print("Provider error:", error)
-        }
+// MARK: Evaluation Tests
+extension SplitProviderTests {
+
+    func testBooleanEvaluationTrue() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "true"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
+        XCTAssertEqual(result.value, true)
+    }
+    
+    func testBooleanEvaluationWrong() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "tru"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
+        XCTAssertEqual(result.value, false, "Treatment should be the default value")
+    }
+    
+    func testBooleanEvaluationFalse() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "false"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
+        XCTAssertEqual(result.value, false)
+    }
+
+    func testIntegerEvaluation() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "123"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getIntegerEvaluation(key: "flag", defaultValue: 0, context: nil)
+        XCTAssertEqual(result.value, 123)
+    }
+
+    func testDoubleEvaluation() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "3.14"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getDoubleEvaluation(key: "flag", defaultValue: 0.0, context: nil)
+        XCTAssertEqual(result.value, 3.14, accuracy: 0.0001)
+    }
+
+    func testStringEvaluation() throws {
+        let client = ClientMock()
+        let evaluator = Evaluator(splitClient: client)
+        client.treatment = "hello"
+
+        let provider = SplitProvider()
+        provider.splitClient = client
+        provider.evaluator = evaluator
+
+        let result = try provider.getStringEvaluation(key: "flag", defaultValue: "default", context: nil)
+        XCTAssertEqual(result.value, "hello")
     }
 }

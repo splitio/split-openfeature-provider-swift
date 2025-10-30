@@ -17,6 +17,7 @@ public class SplitProvider: FeatureProvider {
     public var metadata: any OpenFeature.ProviderMetadata = SplitProviderMetadata()
     private let eventHandler = EventHandler()
     private var splitContext: InitContext?
+    internal var evaluator: Evaluator!
     
     // MARK: Custom Initialization
     public init(_ config: SplitClientConfig? = nil) {
@@ -45,12 +46,11 @@ public class SplitProvider: FeatureProvider {
         // 2. Client setup
         splitContext = InitContext(apiKey: API_KEY, userKey: USER_KEY)
         let key: Key = Key(matchingKey: USER_KEY)
-        if factory == nil {
-            factory = DefaultSplitFactoryBuilder().setApiKey(API_KEY).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build()
-        }
+        if factory == nil { factory = DefaultSplitFactoryBuilder().setApiKey(API_KEY).setKey(key).setConfig(splitClientConfig ?? SplitClientConfig()).build() }
         splitClient = factory?.client
+        if evaluator == nil { evaluator = Evaluator(splitClient: splitClient) }
 
-        // 3. Wait for SDK
+        // 3. Subscribe to events and wait for SDK
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
 
@@ -62,7 +62,7 @@ public class SplitProvider: FeatureProvider {
                 if error {
                     eventHandler.send(.error(errorCode: .general, message: "Provider timed out"))
                 } else {
-                    continuation.resume()
+                    continuation.resume() // Pass control to openFeature again
                 }
             }
 
@@ -80,32 +80,34 @@ public class SplitProvider: FeatureProvider {
 
 // MARK: Evaluation Methods
 extension SplitProvider {
-
-    public func getBooleanEvaluation(key: String, defaultValue: Bool, context: (any OpenFeature.EvaluationContext)?) throws -> OpenFeature.ProviderEvaluation<Bool> {
-        ProviderEvaluation(value: false)
+    
+    public func getBooleanEvaluation(key: String, defaultValue: Bool, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Bool> {
+        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
     }
 
-    public func getStringEvaluation(key: String, defaultValue: String, context: (any OpenFeature.EvaluationContext)?) throws -> OpenFeature.ProviderEvaluation<String> {
-        ProviderEvaluation(value: splitClient?.getTreatment(key) ?? Constants.CONTROL.rawValue)
+    public func getStringEvaluation(key: String, defaultValue: String, context: (any EvaluationContext)?) throws -> ProviderEvaluation<String> {
+        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
     }
 
-    public func getIntegerEvaluation(key: String, defaultValue: Int64, context: (any OpenFeature.EvaluationContext)?) throws -> OpenFeature.ProviderEvaluation<Int64> {
-        ProviderEvaluation(value: 1)
+    public func getIntegerEvaluation(key: String, defaultValue: Int64, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Int64> {
+        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
     }
 
-    public func getDoubleEvaluation(key: String, defaultValue: Double, context: (any OpenFeature.EvaluationContext)?) throws -> OpenFeature.ProviderEvaluation<Double> {
-        ProviderEvaluation(value: 1.0)
+    public func getDoubleEvaluation(key: String, defaultValue: Double, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Double> {
+        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
     }
 
-    public func getObjectEvaluation(key: String, defaultValue: OpenFeature.Value, context: (any OpenFeature.EvaluationContext)?) throws -> OpenFeature.ProviderEvaluation<OpenFeature.Value> {
-        throw SplitError.notImplemented
+    public func getObjectEvaluation(key: String, defaultValue: Value, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Value> {
+        evaluator.evaluate(key: key, defaultValue: defaultValue, context: context) ?? ProviderEvaluation(value: defaultValue)
     }
 
     public func observe() -> AnyPublisher<OpenFeature.ProviderEvent?, Never> {
-        eventHandler.publisher.eraseToAnyPublisher()
+        eventHandler.publisher.eraseToAnyPublisher() 
     }
 }
 
+// MARK: Open Feature
 struct SplitProviderMetadata: ProviderMetadata {
     let name: String? = Constants.PROVIDER_NAME.rawValue
 }
+
