@@ -226,16 +226,16 @@ extension SplitProviderTests {
 
 // MARK: Evaluation Tests
 extension SplitProviderTests {
-
+    
     func testBooleanTrue() throws {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "true"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
         XCTAssertEqual(result.value, true)
     }
@@ -244,11 +244,11 @@ extension SplitProviderTests {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "tRuE"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
         XCTAssertEqual(result.value, true)
     }
@@ -257,11 +257,11 @@ extension SplitProviderTests {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "on"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: false, context: nil)
         XCTAssertEqual(result.value, true)
     }
@@ -270,11 +270,11 @@ extension SplitProviderTests {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "false"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: true, context: nil)
         XCTAssertEqual(result.value, false)
     }
@@ -283,50 +283,50 @@ extension SplitProviderTests {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "oFf"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getBooleanEvaluation(key: "flag", defaultValue: true, context: nil)
         XCTAssertEqual(result.value, false)
     }
-
+    
     func testIntegerEvaluation() throws {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "123"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getIntegerEvaluation(key: "flag", defaultValue: 0, context: nil)
         XCTAssertEqual(result.value, 123)
     }
-
+    
     func testDoubleEvaluation() throws {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "3.14"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getDoubleEvaluation(key: "flag", defaultValue: 0.0, context: nil)
         XCTAssertEqual(result.value, 3.14, accuracy: 0.0001)
     }
-
+    
     func testStringEvaluation() throws {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "hello"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
-
+        
         let result = try provider.getStringEvaluation(key: "flag", defaultValue: "default", context: nil)
         XCTAssertEqual(result.value, "hello")
     }
@@ -335,7 +335,7 @@ extension SplitProviderTests {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = "tru"
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
@@ -355,13 +355,13 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-                case .ready:
-                    result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
-                    evaluation.fulfill()
-                case .error(_, _):
-                    break
-                default:
-                    break
+            case .ready:
+                result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
+                evaluation.fulfill()
+            case .error(_, _):
+                break
+            default:
+                break
             }
         }
         
@@ -376,7 +376,7 @@ extension SplitProviderTests {
         // Kickoff Provider
         Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
         wait(for: [evaluation], timeout: 3)
-
+        
         XCTAssertEqual(result?.flagMetadata["config"]?.asString(), config)
     }
     
@@ -388,13 +388,13 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-                case .ready:
-                    result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
-                    evaluation.fulfill()
-                case .error(_, _):
-                    break
-                default:
-                    break
+            case .ready:
+                result = OpenFeatureAPI.shared.getClient().getBooleanDetails(key: "test", defaultValue: false)
+                evaluation.fulfill()
+            case .error(_, _):
+                break
+            default:
+                break
             }
         }
         
@@ -409,7 +409,7 @@ extension SplitProviderTests {
         // Kickoff Provider
         Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
         wait(for: [evaluation], timeout: 3)
-
+        
         XCTAssertEqual(result?.flagMetadata["config"]?.asString(), config)
     }
     
@@ -422,18 +422,18 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-                case .ready:
+            case .ready:
                 
-                    // Pass attributes as context change (only valid form supported for now by Open Feature)
-                    let context = ImmutableContext(targetingKey: "martin", structure: ImmutableStructure(attributes: ["someKey": OpenFeature.Value.integer(expectedResult)]))
-                    OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
+                // Pass attributes as context change (only valid form supported for now by Open Feature)
+                let context = ImmutableContext(targetingKey: "martin", structure: ImmutableStructure(attributes: ["someKey": OpenFeature.Value.integer(expectedResult)]))
+                OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
                 
-                    result = OpenFeatureAPI.shared.getClient().getStringValue(key: "test", defaultValue: "")
-                    evaluation.fulfill()
-                case .error(_, _):
-                    break
-                default:
-                    break
+                result = OpenFeatureAPI.shared.getClient().getStringValue(key: "test", defaultValue: "")
+                evaluation.fulfill()
+            case .error(_, _):
+                break
+            default:
+                break
             }
         }
         
@@ -451,7 +451,7 @@ extension SplitProviderTests {
             openFeatureReady.fulfill()
         }
         wait(for: [openFeatureReady, evaluation], timeout: 3)
-
+        
         XCTAssertEqual(result, "on-\(expectedResult)")
     }
     
@@ -460,7 +460,7 @@ extension SplitProviderTests {
         let client = ClientMock()
         let evaluator = Evaluator(splitClient: client)
         client.treatment = SplitConstants.control // Simulate flag not found at the client level
-
+        
         let provider = SplitProvider(key: "sofd75fo7w6ao576oshf567jshdkfrbk746")
         provider.splitClient = client
         provider.evaluator = evaluator
@@ -485,14 +485,14 @@ extension SplitProviderTests {
         // Setup events observer
         providerCancellable = OpenFeatureAPI.shared.observe().sink { event in
             switch event {
-                case .ready:
-                    // In this case we are asking an Integer to a flag that evaluates to "on"
-                    result = OpenFeatureAPI.shared.getClient().getIntegerValue(key: "test", defaultValue: defaultResult)
-                    evaluation.fulfill()
-                case .error(_, _):
-                    break
-                default:
-                    break
+            case .ready:
+                // In this case we are asking an Integer to a flag that evaluates to "on"
+                result = OpenFeatureAPI.shared.getClient().getIntegerValue(key: "test", defaultValue: defaultResult)
+                evaluation.fulfill()
+            case .error(_, _):
+                break
+            default:
+                break
             }
         }
         
@@ -506,10 +506,13 @@ extension SplitProviderTests {
         // Kickoff Provider
         Task { await OpenFeatureAPI.shared.setProviderAndWait(provider: provider, initialContext: context) }
         wait(for: [evaluation], timeout: 3)
-
+        
         XCTAssertEqual(result, defaultResult)
     }
-    
+}
+
+// MARK: Context change tests
+extension SplitProviderTests {
     func testOnContextSetSameContext() async throws {
         let provider = SplitProviderMock(key: "dummy-key")
         provider.factory = FactoryMock()
