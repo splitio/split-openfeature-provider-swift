@@ -21,7 +21,7 @@ public class SplitProvider: FeatureProvider {
     internal var evaluator = Evaluator()
     
     // MARK: Inits
-    internal init(key: String, config: SplitClientConfig? = nil) {
+    public init(key: String, config: SplitClientConfig? = nil) {
         sdkKey = key
         splitClientConfig = config
     }
@@ -60,9 +60,9 @@ public class SplitProvider: FeatureProvider {
         
         if startedClients.contains(userKey) { return }
 
-        // 3. If it's a new client
-        await linkEvents(splitClient)
-        startedClients.append(userKey) // Register to avoid init deadlock after onContextSet
+        // 3. If it's a new client, wait for init & register it to avoid init deadlock after onContextSet
+        await startClient(splitClient)
+        startedClients.append(userKey)
     }
         
     // MARK: Context change
@@ -76,7 +76,7 @@ public class SplitProvider: FeatureProvider {
     }
     
     // MARK: Events Linking
-    private func linkEvents(_ splitClient: SplitClient) async {
+    private func startClient(_ splitClient: SplitClient) async {
         
         splitClient.on(event: .sdkUpdated) { [weak self] in
             self?.eventHandler.send(.configurationChanged)
@@ -85,8 +85,8 @@ public class SplitProvider: FeatureProvider {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var didResume = false
             
+            // OpenFeature .ready event is fired by OpenFeature, so no need to add it here too
             splitClient.on(event: .sdkReady) {
-                // OpenFeature .ready event is fired by OpenFeature, so no need to add it here too
                 resume()
             }
             
