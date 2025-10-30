@@ -6,14 +6,14 @@ import OpenFeature
 import Split
 
 public class SplitProvider: FeatureProvider {
-    
+
     // Split Components
     internal var splitClient: SplitClient?
     internal var splitClientConfig: SplitClientConfig?
     internal var factory: SplitFactory?
     private var sdkKey: String
     private var startedClients: [String] = []
-    
+
     // Open Feature Components
     public var hooks: [any OpenFeature.Hook] = []
     public var metadata: any OpenFeature.ProviderMetadata = SplitProviderMetadata()
@@ -31,12 +31,12 @@ public class SplitProvider: FeatureProvider {
     }
     
     public func initialize(initialContext: (any OpenFeature.EvaluationContext)?) async throws { // Called by OpenFeature
-        
+
         guard sdkKey != "" else {
             eventHandler.send(.error(errorCode: .providerFatal, message: "API key is missing for Split provider."))
             throw SplitError.missingInitData
         }
-        
+
         // 1. Unpack Context
         guard let initialContext = initialContext else {
             eventHandler.send(.error(errorCode: .invalidContext, message: "Initialization context is missing for Split provider."))
@@ -47,7 +47,7 @@ public class SplitProvider: FeatureProvider {
             eventHandler.send(.error(errorCode: .targetingKeyMissing, message: "Targeting key is missing for Split provider."))
             throw SplitError.missingInitData
         }
-        
+
         // 2. Client setup
         let key: Key = Key(matchingKey: userKey)
         splitClientConfig?.logLevel = .verbose
@@ -64,13 +64,13 @@ public class SplitProvider: FeatureProvider {
         await startClient(splitClient)
         startedClients.append(userKey)
     }
-        
+
     // MARK: Context change
     public func onContextSet(oldContext: (any OpenFeature.EvaluationContext)?, newContext: any OpenFeature.EvaluationContext) async throws {
         // Even if it's the same targeting key, we need to update the context if the options change
         // since this is the only way to evaluate with attributes.
         guard newContext.isDifferent(oldContext) else { return }
-        
+
         try await initialize(initialContext: newContext)
         eventHandler.send(.contextChanged)
     }
@@ -89,7 +89,7 @@ public class SplitProvider: FeatureProvider {
             splitClient.on(event: .sdkReady) {
                 resume()
             }
-            
+
             splitClient.on(event: .sdkReadyFromCache) { [weak self] in
                 self?.eventHandler.send(.stale)
                 resume()
@@ -102,7 +102,7 @@ public class SplitProvider: FeatureProvider {
             func resume(timeOut: Bool = false) {
                 guard !didResume else { return } // Avoid crash by multiple countinuation calls
                 didResume = true
-                
+
                 if timeOut {
                     eventHandler.send(.error(errorCode: .general, message: "Split Provider timed out."))
                 }
@@ -117,7 +117,7 @@ public class SplitProvider: FeatureProvider {
 
 // MARK: Evaluation Methods
 extension SplitProvider {
-    
+
     public func getBooleanEvaluation(key: String, defaultValue: Bool, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Bool> {
         try evaluator.evaluate(key: key, type: Bool.self, context: context)
     }
@@ -135,7 +135,7 @@ extension SplitProvider {
     }
 
     public func getObjectEvaluation(key: String, defaultValue: Value, context: (any EvaluationContext)?) throws -> ProviderEvaluation<Value> {
-        throw OpenFeatureError.generalError(message: "Split SDK does not support object evaluation")
+        try evaluator.evaluateObject(key: key, context: context, parser: parseJSONTreatment)
     }
 
     public func observe() -> AnyPublisher<OpenFeature.ProviderEvent?, Never> {
@@ -151,5 +151,58 @@ struct SplitProviderMetadata: ProviderMetadata {
 private extension EvaluationContext {
     func isDifferent(_ other: EvaluationContext?) -> Bool {
         getTargetingKey() != other?.getTargetingKey() || asObjectMap() != other?.asObjectMap()
+    }
+}
+
+// MARK: JSON Parsing
+private extension SplitProvider {
+
+    /// Parses a JSON string treatment into an OpenFeature Value
+    func parseJSONTreatment(_ treatment: String) throws -> Value {
+        guard let jsonData = treatment.data(using: .utf8) else {
+            throw OpenFeatureError.parseError(message: "Failed to parse JSON treatment")
+        }
+
+        let jsonObject: Any
+        do {
+            jsonObject = try JSONSerialization.jsonObject(with: jsonData, options: [])
+        } catch {
+            throw OpenFeatureError.parseError(message: "Failed to parse JSON treatment")
+        }
+
+        // Ensure it's a JSON object (dictionary), not array or primitive
+        guard let dictionary = jsonObject as? [String: Any] else {
+            throw OpenFeatureError.parseError(message: "Treatment must be a JSON object")
+        }
+
+        // Convert to OpenFeature Value
+        return try convertToValue(dictionary)
+    }
+
+    /// Converts Any type from JSONSerialization to OpenFeature Value
+    private func convertToValue(_ object: Any) throws -> Value {
+        switch object {
+        case let dict as [String: Any]:
+            var structure: [String: Value] = [:]
+            for (key, value) in dict {
+                structure[key] = try convertToValue(value)
+            }
+            return .structure(structure)
+        case let array as [Any]:
+            let values = try array.map { try convertToValue($0) }
+            return .list(values)
+        case let string as String:
+            return .string(string)
+        case let bool as Bool:
+            return .boolean(bool)
+        case let int as Int:
+            return .integer(Int64(int))
+        case let double as Double:
+            return .double(double)
+        case is NSNull:
+            return .null
+        default:
+            throw OpenFeatureError.parseError(message: "Unsupported JSON type")
+        }
     }
 }
