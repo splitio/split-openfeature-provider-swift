@@ -22,6 +22,7 @@ let package = Package(
         // Dependencies declare other packages that this package depends on.
         .package(url: "https://github.com/open-feature/swift-sdk.git", from: "0.4.0"),
         .package(url: "https://github.com/splitio/ios-client.git", from: "3.4.2"),
+        .package(url: "https://github.com/httpswift/swifter.git", from: "1.5.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -35,7 +36,13 @@ let package = Package(
         ),
         .testTarget(
             name: "SplitProviderTests",
-            dependencies: ["SplitProvider"]
+            dependencies: [
+                "SplitProvider",
+                .product(name: "Swifter", package: "swifter")
+            ],
+            resources: [
+                .process("Resources")
+            ]
         ),
     ]
 )

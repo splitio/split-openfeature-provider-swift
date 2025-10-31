@@ -9,21 +9,28 @@ internal final class FactoryMock: SplitFactory {
     var manager: any SplitManager = SplitManagerMock()
     var userConsent: UserConsent = .granted
     var version: String = "1"
+    var clients = [Key: SplitClient]()
     
-    func client(key: Key) -> any SplitClient { ClientMock() }
-    func client(matchingKey: String) -> any SplitClient { ClientMock() }
-    func client(matchingKey: String, bucketingKey: String?) -> any SplitClient { ClientMock() }
-    func setUserConsent(enabled: Bool) {}
-    
-    // For testing
-    func getClient() -> ClientMock {
-        client as! ClientMock
+    func client(key: Key) -> any SplitClient {
+        guard let client = clients[key] else {
+            let client = ClientMock()
+            clients[key] = client
+            return client
+        }
+        
+        return client
     }
+    
+    func client(matchingKey: String) -> any SplitClient { client(key: Key(matchingKey: matchingKey)) }
+    func client(matchingKey: String, bucketingKey: String?) -> any SplitClient { client(matchingKey: matchingKey) }
+    func setUserConsent(enabled: Bool) {}
 }
 
 internal final class ClientMock: SplitClient {
     var treatment = "Treatment"
+    var config: String? = nil
     var timeout = false
+    var attributes: [String: Any] = [:]
     
     init() {
         print(":: Mock Client started")
@@ -39,19 +46,24 @@ internal final class ClientMock: SplitClient {
     }
     
     func getTreatments(splits: [String], attributes: [String : Any]?) -> [String : String] {
-        [treatment:treatment]
+        [treatment: treatment]
     }
     
     func getTreatmentWithConfig(_ split: String) -> SplitResult {
-        SplitResult(treatment: treatment, config: nil)
+        SplitResult(treatment: treatment, config: config)
     }
     
     func getTreatmentWithConfig(_ split: String, attributes: [String : Any]?) -> SplitResult {
-        SplitResult(treatment: treatment, config: nil)
+        
+        if let attribute = attributes?["someKey"] { // Simulate attributes processing
+            treatment = "\(treatment)-\(attribute)"
+        }
+        
+        return SplitResult(treatment: treatment, config: config)
     }
     
     func getTreatmentsWithConfig(splits: [String], attributes: [String : Any]?) -> [String : SplitResult] {
-        [treatment: SplitResult(treatment: treatment, config: nil)]
+        [treatment: SplitResult(treatment: treatment, config: config)]
     }
     
     func getTreatment(_ split: String, attributes: [String : Any]?, evaluationOptions: EvaluationOptions?) -> String {
@@ -63,11 +75,11 @@ internal final class ClientMock: SplitClient {
     }
     
     func getTreatmentWithConfig(_ split: String, attributes: [String : Any]?, evaluationOptions: EvaluationOptions?) -> SplitResult {
-        SplitResult(treatment: treatment, config: nil)
+        SplitResult(treatment: treatment, config: config)
     }
     
     func getTreatmentsWithConfig(splits: [String], attributes: [String : Any]?, evaluationOptions: EvaluationOptions?) -> [String : SplitResult] {
-        [treatment: SplitResult(treatment: treatment, config: nil)]
+        [treatment: SplitResult(treatment: treatment, config: config)]
     }
     
     func getTreatmentsByFlagSet(_ flagSet: String, attributes: [String : Any]?) -> [String : String] {
@@ -79,11 +91,11 @@ internal final class ClientMock: SplitClient {
     }
     
     func getTreatmentsWithConfigByFlagSet(_ flagSet: String, attributes: [String : Any]?) -> [String : SplitResult] {
-        [treatment: SplitResult(treatment: treatment, config: nil)]
+        [treatment: SplitResult(treatment: treatment, config: config)]
     }
     
     func getTreatmentsWithConfigByFlagSets(_ flagSets: [String], attributes: [String : Any]?) -> [String : SplitResult] {
-        [treatment: SplitResult(treatment: treatment, config: nil)]
+        [treatment: SplitResult(treatment: treatment, config: config)]
     }
     
     func getTreatmentsByFlagSet(_ flagSet: String, attributes: [String : Any]?, evaluationOptions: EvaluationOptions?) -> [String : String] {
@@ -95,16 +107,16 @@ internal final class ClientMock: SplitClient {
     }
     
     func getTreatmentsWithConfigByFlagSet(_ flagSet: String, attributes: [String : Any]?, evaluationOptions: EvaluationOptions?) -> [String : SplitResult] {
-        [treatment: SplitResult(treatment: treatment, config: nil)]
+        [treatment: SplitResult(treatment: treatment, config: config)]
     }
     
     func getTreatmentsWithConfigByFlagSets(_ flagSets: [String], attributes: [String : Any]?, evaluationOptions: EvaluationOptions?) -> [String : SplitResult] {
-        [treatment: SplitResult(treatment: treatment, config: nil)]
+        [treatment: SplitResult(treatment: treatment, config: config)]
     }
     
+    // MARK: Events
     var events: [SplitEvent: ()->()] = [:]
     
-    // MARK: Events
     func on(event: SplitEvent, execute action: @escaping SplitAction) {
         
         events[event] = action
@@ -139,7 +151,6 @@ internal final class ClientMock: SplitClient {
     }
     
     func on(event: SplitEvent, runInBackground: Bool, execute action: @escaping SplitAction) {}
-    
     func on(event: SplitEvent, queue: DispatchQueue, execute action: @escaping SplitAction) {}
     
     // MARK: Attributes
