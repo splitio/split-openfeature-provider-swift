@@ -77,21 +77,21 @@ final class Evaluator {
     }
 
     // Map OpenFeature EvaluationContext to Split SDK attributes
-    private func mapAttributes(_ context: [String: OpenFeature.Value]?) -> [String: String]? {
+    private func mapAttributes(_ context: [String: OpenFeature.Value]?) -> [String: Any]? {
         guard let context = context else { return nil }
 
-        var result: [String: String] = [:]
+        var result: [String: Any] = [:]
 
         for (key, value) in context {
             switch value {
                 case .string(let str):
                     result[key] = str
                 case .boolean(let bool):
-                    result[key] = String(bool)
+                    result[key] = bool
                 case .integer(let int):
-                    result[key] = String(int)
+                    result[key] = int
                 case .double(let dbl):
-                    result[key] = String(dbl)
+                    result[key] = dbl
                 case .structure(_):
                     break
                 default:

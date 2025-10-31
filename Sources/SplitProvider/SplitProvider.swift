@@ -72,7 +72,6 @@ public class SplitProvider: FeatureProvider {
         guard newContext.isDifferent(oldContext) else { return }
 
         try await initialize(initialContext: newContext)
-        eventHandler.send(.contextChanged)
     }
     
     // MARK: Events Linking
