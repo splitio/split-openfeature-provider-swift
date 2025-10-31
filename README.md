@@ -15,7 +15,7 @@ Below is a simple example that describes the instantiation of the Split Provider
 Add the Split OpenFeature Provider dependency to your XCode project via Swift Package Manager.
 
 ```swift
-.package(url: "https://github.com/splitio/split-openfeature-provider-swift", from: "1.0.0-rc1")
+.package(url: "https://github.com/splitio/split-openfeature-provider-swift", from: "1.0.0")
 ```
 
 ### Usage
@@ -62,15 +62,15 @@ The Split OpenFeature Provider requires a targeting key to be set in the evaluat
 #### Setting a targeting key during initialization:
 
 ```swift
-let initialContext = ImmutableContext(targetingKey = "user-123")
-OpenFeatureAPI.setProvider(provider, initialContext = initialContext)
+let initialContext = ImmutableContext(targetingKey: "user-123")
+await OpenFeatureAPI.setProviderAndWait(provider: provider, initialContext: initialContext)
 ```
 
 #### Changing the targeting key at runtime:
 
 ```swift
-let newContext = ImmutableContext(targetingKey = "user-456")
-OpenFeatureAPI.setEvaluationContext(newContext)
+let newContext = ImmutableContext(targetingKey: "user-456")
+await OpenFeatureAPI.setEvaluationContextAndWait(evaluationContext: newContext)
 ```
 
 #### Using attributes for targeting:
@@ -82,7 +82,7 @@ let context = ImmutableContext(
         "email": Value.String(someValue),
         "age": Value.Integer(30)
 ]))
-OpenFeatureAPI.shared.setEvaluationContext(evaluationContext: context)
+await OpenFeatureAPI.shared.setEvaluationContextAndWait(evaluationContext: context)
 
 let client = OpenFeatureAPI.getClient()
 let result = client.getBooleanDetails("premium-feature", false, context)
