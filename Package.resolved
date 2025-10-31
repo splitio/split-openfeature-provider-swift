@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/splitio/ios-client.git",
         "state": {
           "branch": null,
-          "revision": "0833365635d3019f1283a9a39a5e3830f41daf34",
-          "version": "3.4.1"
+          "revision": "73b8b0d1e94f13383eee534cfea4ef657760f0ae",
+          "version": "3.4.2"
         }
       },
       {
@@ -17,6 +17,15 @@
           "branch": null,
           "revision": "8455efe44541420cfb5ffcf6d95422361e8209a8",
           "version": "0.4.0"
+        }
+      },
+      {
+        "package": "Swifter",
+        "repositoryURL": "https://github.com/httpswift/swifter.git",
+        "state": {
+          "branch": null,
+          "revision": "9483a5d459b45c3ffd059f7b55f9638e268632fd",
+          "version": "1.5.0"
         }
       }
     ]
