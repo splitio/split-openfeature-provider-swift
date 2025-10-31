@@ -15,7 +15,7 @@ Below is a simple example that describes the instantiation of the Split Provider
 Add the Split OpenFeature Provider dependency to your XCode project via Swift Package Manager.
 
 ```swift
-.package(url: "https://github.com/splitio/split-openfeature-provider-swift", from: "1.0.0")
+.package(url: "https://github.com/splitio/split-openfeature-provider-swift", from: "1.0.0-rc1")
 ```
 
 ### Usage
